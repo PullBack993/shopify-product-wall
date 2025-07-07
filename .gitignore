@@ -66,3 +66,7 @@ temp/
 # Optional: Ignore lock files if not using them
 # package-lock.json
 # yarn.lock
+
+# Environment files
+.env
+sync-script/.env
