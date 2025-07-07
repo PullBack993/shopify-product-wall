@@ -6,21 +6,27 @@ export default defineConfig({
   server: {
     host: true,
     port: 3000,
-    cors: true
+    cors: true,
+  },
+  resolve: {
+    alias: {
+      "@": "/src",
+    },
   },
   build: {
-    target: 'es2015',
+    target: "es2015",
     cssCodeSplit: false,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['vue', '@vueuse/core'],
-          qrcode: ['qrcode.vue']
-        }
-      }
-    }
+          vendor: ["vue", "@vueuse/core"],
+          qrcode: ["qrcode"],
+          gsap: ["gsap"],
+        },
+      },
+    },
   },
   optimizeDeps: {
-    include: ['vue', '@vueuse/core', 'qrcode.vue']
-  }
+    include: ["vue", "@vueuse/core", "qrcode", "gsap"],
+  },
 }) 

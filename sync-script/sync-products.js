@@ -19,13 +19,13 @@ const __dirname = dirname(__filename)
 const config = {
   shopifyStore: process.env.SHOPIFY_STORE_URL,
   accessToken: process.env.SHOPIFY_ACCESS_TOKEN,
-  outputDir: join(__dirname, '..', 'public', 'data'),
-  imagesDir: join(__dirname, '..', 'public', 'products'),
-  maxProducts: 100,
+  outputDir: join(__dirname, "..", "public", "data"),
+  imagesDir: join(__dirname, "..", "public", "products"),
+  maxProducts: 2000, // Increased to get all products (was 100)
   imageSize: 400,
   imageQuality: 85,
-  concurrency: 3
-}
+  concurrency: 3,
+};
 
 // Validate configuration
 function validateConfig() {

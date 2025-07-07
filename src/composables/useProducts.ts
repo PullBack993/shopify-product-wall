@@ -1,24 +1,47 @@
 import { ref, computed, onMounted } from 'vue'
+import type { Product, GridImage } from '@/types'
 
 const CACHE_KEY = 'shopify-products-cache'
 const CACHE_TIMESTAMP_KEY = 'shopify-products-cache-timestamp'
 const CACHE_DURATION = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
 
 export function useProducts() {
-  const products = ref([])
+  const products = ref<Product[]>([])
   const loading = ref(false)
-  const error = ref(null)
-  const lastUpdated = ref(null)
+  const error = ref<string | null>(null)
+  const lastUpdated = ref<Date | null>(null)
 
   const lastUpdatedFormatted = computed(() => {
     if (!lastUpdated.value) return 'Never'
     return new Date(lastUpdated.value).toLocaleString()
   })
 
+  // Convert products to grid images format
+  const gridImages = computed<GridImage[]>(() => {
+    return products.value.map(product => ({
+      id: product.id.toString(),
+      url: product.localImageUrl,
+      alt: product.imageAlt,
+      text: product.title,
+      qrCodeData: product.productUrl,
+      aspectRatio: generateAspectRatio(),
+      price: product.price,
+      productType: product.productType
+    }))
+  })
+
+  // Generate controlled aspect ratios for better visibility on TV
+  const generateAspectRatio = (): number => {
+    // Tighter range: 0.95 to 1.2 (ensures good height for all images)
+    // This prevents very short images that are hard to see
+    const ratios = [0.95, 1.0, 1.05, 1.1, 1.15, 1.2]
+    return ratios[Math.floor(Math.random() * ratios.length)]
+  }
+
   /**
    * Check if cached data is still valid
    */
-  const isCacheValid = () => {
+  const isCacheValid = (): boolean => {
     const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY)
     if (!timestamp) return false
     
@@ -29,7 +52,7 @@ export function useProducts() {
   /**
    * Get products from localStorage cache
    */
-  const getCachedProducts = () => {
+  const getCachedProducts = (): Product[] | null => {
     try {
       const cached = localStorage.getItem(CACHE_KEY)
       const timestamp = localStorage.getItem(CACHE_TIMESTAMP_KEY)
@@ -48,7 +71,7 @@ export function useProducts() {
   /**
    * Save products to localStorage cache
    */
-  const setCachedProducts = (productData) => {
+  const setCachedProducts = (productData: Product[]): void => {
     try {
       const timestamp = Date.now()
       localStorage.setItem(CACHE_KEY, JSON.stringify(productData))
@@ -62,7 +85,7 @@ export function useProducts() {
   /**
    * Fetch products from local JSON file
    */
-  const fetchFromLocal = async () => {
+  const fetchFromLocal = async (): Promise<Product[]> => {
     try {
       const response = await fetch('/data/products.json', {
         cache: 'no-cache',
@@ -94,9 +117,9 @@ export function useProducts() {
   /**
    * Fetch products from fallback JSON file
    */
-  const fetchFromFallback = async () => {
+  const fetchFromFallback = async (): Promise<Product[]> => {
     try {
-      const response = await fetch('/fallback.json')
+      const response = await fetch('/data/products-simple.json')
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -113,7 +136,7 @@ export function useProducts() {
   /**
    * Load products with fallback strategy
    */
-  const loadProducts = async () => {
+  const loadProducts = async (): Promise<void> => {
     loading.value = true
     error.value = null
 
@@ -159,7 +182,7 @@ export function useProducts() {
 
       throw new Error('No product data available from any source')
 
-    } catch (err) {
+    } catch (err: any) {
       error.value = err.message
       console.error('Error loading products:', err)
     } finally {
@@ -170,7 +193,7 @@ export function useProducts() {
   /**
    * Refresh products - forces a fresh fetch
    */
-  const refreshProducts = async () => {
+  const refreshProducts = async (): Promise<void> => {
     console.log('Refreshing products...')
     await loadProducts()
   }
@@ -178,7 +201,7 @@ export function useProducts() {
   /**
    * Clear cache
    */
-  const clearCache = () => {
+  const clearCache = (): void => {
     localStorage.removeItem(CACHE_KEY)
     localStorage.removeItem(CACHE_TIMESTAMP_KEY)
     lastUpdated.value = null
@@ -191,6 +214,7 @@ export function useProducts() {
 
   return {
     products,
+    gridImages,
     loading,
     error,
     lastUpdated: lastUpdatedFormatted,
