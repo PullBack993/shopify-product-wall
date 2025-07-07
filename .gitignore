@@ -1,0 +1,68 @@
+# Node modules
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build outputs
+dist/
+build/
+public/build/
+
+# Vite
+.vite/
+
+# Coverage
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Editor folders
+.vscode/
+.idea/
+*.sw?
+
+# Optional Docker files
+*.localdev.dockerfile
+docker-compose.override.yml
+
+# Static JSON output (can include if generated dynamically)
+backend/data/products.json
+
+# Cache
+.cache/
+.pnpm-store/
+.nuxtrc
+
+# TypeScript
+*.tsbuildinfo
+
+# MacOS
+.AppleDouble
+.LSOverride
+
+# Git hooks
+.husky/
+
+# Optional logs or temporary files
+tmp/
+temp/
+*.tmp
+
+# Nuxt specific (in case you switch back)
+.nuxt/
+.output/
+
+# Optional: Ignore lock files if not using them
+# package-lock.json
+# yarn.lock
