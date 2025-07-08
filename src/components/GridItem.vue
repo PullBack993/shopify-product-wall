@@ -12,27 +12,13 @@
         :src="image.url"
         :alt="image.alt"
         class="grid-image"
-        :class="{ 'image-hidden': isRotating }"
         loading="lazy"
         @load="onImageLoad"
         @error="onImageError"
       />
       
-      <!-- Rotation skeleton (maintains dimensions during image changes) -->
-      <div v-if="isRotating" class="rotation-skeleton">
-        <div class="skeleton-image"></div>
-        <div class="skeleton-overlay">
-          <div class="skeleton-text">
-            <div class="skeleton-title"></div>
-            <div class="skeleton-price"></div>
-            <div class="skeleton-type"></div>
-          </div>
-          <div class="skeleton-qr"></div>
-        </div>
-      </div>
-      
       <!-- Initial loading skeleton -->
-      <div v-else-if="isLoading" class="loading-skeleton"></div>
+      <div v-if="isLoading" class="loading-skeleton"></div>
       
       <!-- Error state -->
       <div v-if="hasError" class="error-state">
@@ -75,19 +61,15 @@ const qrCanvas = ref<HTMLCanvasElement | null>(null)
 const isLoading = ref(true)
 const hasError = ref(false)
 const isChanging = ref(false)
-const isRotating = ref(false) // New state for rotation skeleton
-const currentImageUrl = ref(props.image.url) // Track current image URL
 
 const onImageLoad = () => {
   isLoading.value = false
   hasError.value = false
-  isRotating.value = false // Hide rotation skeleton when new image loads
 }
 
 const onImageError = () => {
   isLoading.value = false
   hasError.value = true
-  isRotating.value = false // Hide rotation skeleton on error
 }
 
 const generateQRCode = async () => {
@@ -109,33 +91,47 @@ const generateQRCode = async () => {
   }
 }
 
-// Watch for ALL property changes to detect rotation
-watch(() => [props.image.id, props.image.text, props.image.url], ([newId, newText, newUrl], [oldId, oldText, oldUrl]) => {
-  if (oldId && newId !== oldId) {
-    console.log(`🎨 IMAGE CHANGING DETECTED!`)
-    console.log(`   ID: ${oldId} → ${newId}`)
-    console.log(`   Product: "${oldText}" → "${newText}"`)
-    console.log(`   URL: ${oldUrl} → ${newUrl}`)
+// Watch for image prop changes to detect rotation
+watch(() => props.image, (newImage, oldImage) => {
+  console.log(`🔍 GRIDITEM WATCH TRIGGERED:`)
+  console.log(`   • Component has image: ${props.image.text}`)
+  console.log(`   • New image ID: ${newImage.id}`)
+  console.log(`   • Old image ID: ${oldImage?.id || 'undefined'}`)
+  
+  if (oldImage && newImage.id !== oldImage.id) {
+    console.log(`🎨 GRIDITEM: Image change detected!`)
+    console.log(`   Component received new image:`)
+    console.log(`   • Old ID: ${oldImage.id}`)
+    console.log(`   • New ID: ${newImage.id}`)
+    console.log(`   • Old Product: "${oldImage.text}"`)
+    console.log(`   • New Product: "${newImage.text}"`)
+    console.log(`   • Old URL: ${oldImage.url}`)
+    console.log(`   • New URL: ${newImage.url}`)
     
-    // Show rotation skeleton for ANY image change
-    isRotating.value = true
+    // Smooth fade transition
+    isChanging.value = true
     isLoading.value = false 
     hasError.value = false
-    isChanging.value = true
     
-    // Hide skeleton and show new image after 2 seconds (longer for visibility)
+    // Fade out, then fade in with new image
     setTimeout(() => {
-      console.log('✅ Rotation animation complete - showing new image')
-      isRotating.value = false
+      console.log(`✅ GRIDITEM: Animation complete for "${newImage.text}"`)
       isChanging.value = false
-    }, 2000) // Increased to 2 seconds for better visibility
+    }, 600) // Smooth fade duration
     
     // Update QR code immediately
     nextTick(() => {
       generateQRCode()
     })
+  } else {
+    console.log(`🔍 GRIDITEM: No ID change detected (${oldImage?.id || 'no old'} → ${newImage.id})`)
   }
 }, { deep: true, flush: 'post' })
+
+// Also watch the key prop to ensure Vue is tracking changes
+watch(() => props.image.id, (newId, oldId) => {
+  console.log(`🔑 GRIDITEM ID WATCH: ${oldId} → ${newId}`)
+}, { flush: 'post' })
 
 onMounted(() => {
   generateQRCode()
@@ -168,12 +164,14 @@ onMounted(() => {
     }
   }
   
-  // Visual feedback when image changes
+  // Smooth fade animation when image changes
   &.image-changing {
-    animation: imageChange 1s ease-out;
-    
     .grid-image {
-      animation: imageFlash 1s ease-out;
+      animation: smoothFade 0.6s ease-in-out;
+    }
+    
+    .overlay {
+      animation: overlayFade 0.6s ease-in-out;
     }
   }
 }
@@ -408,6 +406,33 @@ onMounted(() => {
   }
   100% {
     background-position: calc(200px + 100%) 0;
+  }
+}
+
+@keyframes smoothFade {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes overlayFade {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
   }
 }
 

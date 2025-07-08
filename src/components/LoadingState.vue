@@ -1,0 +1,36 @@
+<template>
+  <div class="loading-state">
+    <div class="spinner"></div>
+    <p>Loading your fabric collection...</p>
+  </div>
+</template>
+
+<script setup lang="ts">
+// No props needed - this is a static loading state
+</script>
+
+<style lang="scss" scoped>
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  text-align: center;
+}
+
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+</style> 
