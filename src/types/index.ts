@@ -29,4 +29,5 @@ export interface GridImage {
   price?: string;
   compareAtPrice?: string;
   productType?: string;
+  label?: "sale" | "new" | "top-selling";
 } 
