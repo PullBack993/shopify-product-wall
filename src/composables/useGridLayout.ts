@@ -79,7 +79,7 @@ export function useGridLayout() {
 
     // Calculate screen-based capacity for TV display
     const headerHeight = 0; // No header currently
-    const brandDisplayHeight = 80; // Brand display footer height (50px logo + 20px padding + 10px buffer)
+    const brandDisplayHeight = 0; // Brand display footer height (50px logo + 20px padding + 10px buffer)
     const gridPadding = 10; // 5px top + 5px bottom from ProductGrid
     const availableHeight =
       window.innerHeight - headerHeight - brandDisplayHeight - gridPadding;
