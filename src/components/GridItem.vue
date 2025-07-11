@@ -1,7 +1,10 @@
 <template>
   <div 
     class="grid-item" 
-    :class="{ 'image-changing': isChanging }"
+    :class="{ 
+      'image-changing': isChanging,
+      [colorScheme || 'scheme-6']: true
+    }"
     :style="{ 
       aspectRatio: image.aspectRatio,
       animationDelay: `${Math.random() * 0.5}s`
@@ -25,12 +28,20 @@
         <span>⚠️ Image unavailable</span>
       </div>
       
+      <!-- Product Label Badge -->
+      <div v-if="image?.label" class="product-label" :class="`label-${image.label}`">
+        <span v-if="image?.label === 'sale'">🏷️ SALE</span>
+        <span v-else-if="image?.label === 'new'">✨ NEW</span>
+        <span v-else-if="image?.label === 'top-selling'">🔥 TOP</span>
+      </div>
+      
       <!-- Overlay content -->
       <div class="overlay">
         <div class="text-overlay">
           <h3 class="product-title">{{ image.text }}</h3>
+          <p v-if="image.productType" class="product-type">{{ image.productType }}
           <p v-if="image.price" class="product-price">€{{ image.price }}</p>
-          <p v-if="image.productType" class="product-type">{{ image.productType }}</p>
+          </p>
         </div>
         
         <!-- QR Code -->
@@ -53,6 +64,12 @@ import type { GridImage } from '@/types'
 
 interface Props {
   image: GridImage
+  /** 
+   * Color scheme from Shopify app:
+   * - scheme-3: #C2B7AC (warm brownish tone)
+   * - scheme-6: #EDE0D4 (light neutral tone)
+   */
+  colorScheme?: 'scheme-3' | 'scheme-6'
 }
 
 const props = defineProps<Props>()
@@ -78,14 +95,48 @@ const generateQRCode = async () => {
   if (!qrCanvas.value) return
   
   try {
+    // Generate the QR code first
     await QRCode.toCanvas(qrCanvas.value, props.image.qrCodeData, {
-      width: 100, // Optimized for column width (300px)
+      width: 80,
       margin: 0,
       color: {
         dark: '#000000',
         light: '#ffffff'
       }
     })
+    
+    // Add logo to the center of the QR code
+    const canvas = qrCanvas.value
+    const ctx = canvas.getContext('2d')
+    
+    if (ctx) {
+      // Create and load the logo image
+      const logoImg = new Image()
+      logoImg.crossOrigin = 'anonymous'
+      
+      logoImg.onload = () => {
+        // Calculate logo size (about 20% of QR code size)
+        const logoSize = canvas.width * 0.2
+        const logoX = (canvas.width - logoSize) / 2
+        const logoY = (canvas.height - logoSize) / 2
+        
+        // Draw a white background circle behind the logo for better visibility
+        ctx.fillStyle = 'white'
+        ctx.beginPath()
+        ctx.arc(canvas.width / 2, canvas.height / 2, logoSize / 2 + 2, 0, 2 * Math.PI)
+        ctx.fill()
+        
+        // Draw the logo
+        ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize)
+      }
+      
+      logoImg.onerror = () => {
+        console.warn('Logo could not be loaded for QR code')
+      }
+      
+      // Load the logo from the public directory
+      logoImg.src = '/favicon.svg'
+    }
   } catch (error) {
     console.error('QR Code generation failed:', error)
   }
@@ -139,13 +190,20 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
+:root {
+  --shopify-bg-scheme-3: #C2B7AC;
+  --shopify-bg-scheme-6: #EDE0D4;
+  --shopify-text-scheme-3: #332313;
+  --shopify-text-scheme-6: #4F4F4F;
+}
+
 .grid-item {
   position: relative;
   break-inside: avoid;
   margin-bottom: 4px; /* Minimal gap for maximum screen usage */
   border-radius: 14px;
   overflow: hidden;
-  background: #f8f9fa;
+  background: var(--shopify-bg-scheme-6); /* Using the lighter scheme as default */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   animation: fadeInUp 0.6s ease-out both;
@@ -154,6 +212,15 @@ onMounted(() => {
   vertical-align: top;
   min-height: 250px; /* Ensure minimum height for visibility */
   box-sizing: border-box;
+  
+  /* Alternative scheme class */
+  &.scheme-3 {
+    background: var(--shopify-bg-scheme-3);
+  }
+  
+  &.scheme-6 {
+    background: var(--shopify-bg-scheme-6);
+  }
   
   &:hover {
     transform: translateY(-2px); /* Reduced to minimize visual gaps */
@@ -206,12 +273,21 @@ onMounted(() => {
   height: 100%;
   background: linear-gradient(
     90deg,
-    #f0f0f0 25%,
-    #e0e0e0 37%,
-    #f0f0f0 63%
+    var(--shopify-bg-scheme-6) 25%,
+    rgba(237, 224, 212, 0.7) 37%,
+    var(--shopify-bg-scheme-6) 63%
   );
   background-size: 400% 100%;
   animation: skeleton 1.5s ease-in-out infinite;
+  
+  .grid-item.scheme-3 & {
+    background: linear-gradient(
+      90deg,
+      var(--shopify-bg-scheme-3) 25%,
+      rgba(194, 183, 172, 0.7) 37%,
+      var(--shopify-bg-scheme-3) 63%
+    );
+  }
 }
 
 .rotation-skeleton {
@@ -317,10 +393,89 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f8f9fa;
-  color: #6c757d;
+  background: var(--shopify-bg-scheme-6);
+  color: var(--shopify-text-scheme-6);
   font-size: 14px;
   text-align: center;
+  
+  .grid-item.scheme-3 & {
+    background: var(--shopify-bg-scheme-3);
+    color: var(--shopify-text-scheme-3);
+  }
+}
+
+.product-label {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: labelPulse 2s ease-in-out infinite;
+  font-family: var(--font-family);
+  
+  &.label-sale {
+    background: linear-gradient(135deg, #ff4757, #ff3742);
+    border-color: rgba(255, 255, 255, 0.3);
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(135deg, #ff4757, #ff3742, #ff6b7a);
+      border-radius: 14px;
+      z-index: -1;
+      animation: saleGlow 1.5s ease-in-out infinite alternate;
+    }
+  }
+  
+  &.label-new {
+    background: linear-gradient(135deg, #5352ed, #3742fa);
+    border-color: rgba(255, 255, 255, 0.3);
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(135deg, #5352ed, #3742fa, #7bed9f);
+      border-radius: 14px;
+      z-index: -1;
+      animation: newGlow 2s ease-in-out infinite alternate;
+    }
+  }
+  
+  &.label-top-selling {
+    background: linear-gradient(135deg, #ff9f43, #ff6348);
+    border-color: rgba(255, 255, 255, 0.3);
+    
+    &::before {
+      content: '';
+      position: absolute;
+      top: -2px;
+      left: -2px;
+      right: -2px;
+      bottom: -2px;
+      background: linear-gradient(135deg, #ff9f43, #ff6348, #ffa801);
+      border-radius: 14px;
+      z-index: -1;
+      animation: topGlow 1.8s ease-in-out infinite alternate;
+    }
+  }
 }
 
 .overlay {
@@ -332,59 +487,74 @@ onMounted(() => {
   background: linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.8) 0%,
-    rgba(0, 0, 0, 0.3) 30%,
+    rgba(0, 0, 0, 0.3) 0%,
     rgba(0, 0, 0, 0.1) 70%,
     rgba(0, 0, 0, 0.9) 100%
   );
   opacity: 1; /* Always visible for TV display */
   transition: opacity 0.3s ease;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   justify-content: space-between;
-  padding: 16px;
+  align-items: flex-end;
+  padding: 8px;
 }
 
 .text-overlay {
   color: white;
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-right: 8px;
 }
 
 .product-title {
   font-size: 20px; /* Optimized for portrait TV */
   font-weight: 700;
-  margin: 0 0 10px 0;
-  line-height: 1.2;
+  margin: 0 0 5px 0;
+  line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  font-family: var(--font-family);
 }
 
 .product-price {
   font-size: 22px; /* Optimized for portrait TV */
-  font-weight: 800;
-  margin: 0 0 6px 0;
+  font-weight: 700;
+  margin: 0;
+  margin-right: 1rem;
   color: #ffd700;
+  font-family: var(--font-family);
 }
 
 .product-type {
-  font-size: 14px; /* Optimized for portrait TV */
+  font-size: 10px; /* Optimized for portrait TV */
   opacity: 0.9;
   margin: 0;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.8px;
   font-weight: 600;
+  align-items: center;
+  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-family);
 }
 
 .qr-container {
   display: flex;
   justify-content: flex-end;
   align-items: flex-end;
+  flex-shrink: 0;
 }
 
 .qr-code {
   border-radius: 10px;
-  background: white;
+  background: rgb(255, 255, 255);
   padding: 6px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
@@ -502,6 +672,8 @@ onMounted(() => {
   }
 }
 
+/* Label animation keyframes removed - no automatic labeling */
+
 @media (max-width: 768px) {
   .grid-item {
     margin-bottom: 16px;
@@ -509,20 +681,28 @@ onMounted(() => {
   }
   
   .overlay {
-    padding: 16px;
+    padding: 6px;
+  }
+  
+  .text-overlay {
+    padding-right: 6px;
   }
   
   .product-title {
-    font-size: 18px;
+    font-size: 16px;
+    -webkit-line-clamp: 1;
   }
   
   .product-price {
-    font-size: 20px;
+    font-size: 18px;
   }
   
   .product-type {
-    font-size: 14px;
+    font-size: 12px;
   }
   
+  .qr-code {
+    padding: 4px;
+  }
 }
 </style> 

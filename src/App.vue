@@ -1,15 +1,5 @@
 <template>
   <div class="app">
-    <!-- Header -->
-    <!-- <AppHeader 
-      :store-title="storeTitle"
-      :is-online="isOnline"
-      :loading="loading"
-      :shuffling="shuffling"
-      @shuffle="handleShuffle"
-    /> -->
-
-    <!-- Main Content -->
     <ProductGrid 
       :loading="loading"
       :error="error"
@@ -19,48 +9,36 @@
       @retry="refreshProducts"
     />
 
-    <!-- Footer -->
-    <AppFooter 
-      :display-count="displayImages.length"
-      :total-count="gridImages.length"
-      :num-columns="numColumns"
-      :current-cycle="currentCycle"
-      :rotation-index="rotationIndex"
-      :rotation-queue-length="rotationQueue.length"
-      :total-products-shown="totalProductsShown"
-      :last-updated="lastUpdated"
-    />
+    <!-- Brand Display -->
+    <div class="brand-display">
+      <div class="brand-content">
+        <img src="/logo.png" alt="STOFFEYA Logo" class="brand-logo" />
+        <div class="brand-text">
+          <div class="invitation-text">Besuchen Sie uns online</div>
+          <div class="website-name">stoffeya.at</div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-// import { useOnline } from '@vueuse/core'
-import AppHeader from './components/AppHeader.vue'
 import ProductGrid from './components/ProductGrid.vue'
-import AppFooter from './components/AppFooter.vue'
 import { useProducts } from './composables/useProducts'
 import { useGridLayout } from './composables/useGridLayout'
 import { useImageRotation } from './composables/useImageRotation'
-import { useAutoRefresh } from './composables/useAutoRefresh'
 
-const storeTitle = ref('STOFFEYA')
-// const isOnline = useOnline()
 const shuffling = ref(false)
 
 // Use composables
-const { gridImages, loading, error, lastUpdated, refreshProducts } = useProducts()
+const { gridImages, loading, error, refreshProducts } = useProducts()
 const { numColumns, gap, calculateMaxDisplayImages, handleResize } = useGridLayout()
 const imageRotation = useImageRotation(gridImages)
-const { startAutoRefresh, stopAutoRefresh } = useAutoRefresh(refreshProducts)
 
 // Extract reactive values from image rotation
 const {
   displayImages,
-  rotationQueue,
-  rotationIndex,
-  totalProductsShown,
-  currentCycle,
   initializeDisplayImages,
   startAutoRotate,
   stopAutoRotate,
@@ -131,10 +109,56 @@ onUnmounted(() => {
 .app {
   height: 100vh;
   width: 100vw;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden; /* Prevent any overflow */
 }
+
+.brand-display {
+  background: rgba(51, 35, 19, 0.3);
+  border-top: 1px solid rgba(51, 35, 19, 0.2);
+  padding: 10px 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  
+      .brand-content {
+      display: flex;
+      width: 100%;
+      justify-content: space-between;
+      align-items: center;
+      
+      .brand-logo {
+        height: 50px;
+      }
+      
+      .brand-text {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        
+        .invitation-text {
+          font-size: 1.1rem;
+          font-weight: 400;
+          color: var(--text-light);
+          font-family: var(--font-family);
+          opacity: 0.9;
+          font-style: italic;
+        }
+        
+        .website-name {
+          font-size: 2rem;
+          font-weight: 700;
+          text-transform: uppercase;
+          font-family: var(--font-family);
+          color: var(--text-light);        
+        }
+      }
+    }
+}
+
+
 </style> 

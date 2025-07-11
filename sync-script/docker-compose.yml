@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  shopify-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: stoffeya-shopify-sync
+    restart: unless-stopped
+    
+    # Environment variables
+    environment:
+      - NODE_ENV=production
+      - TZ=Europe/Vienna
+      - SYNC_SCHEDULE=0 2 */14 * 0  # Every 2 weeks on Sunday at 2 AM
+      - RUN_ON_START=false
+      - ENABLE_SCHEDULER=true
+      - TIMEZONE=Europe/Vienna
+    
+    # Environment file (create this with your Shopify credentials)
+    env_file:
+      - .env
+    
+    # Volumes for persistent data
+    volumes:
+      # Data directory - store generated JSON files
+      - ./data:/app/data
+      # Public directory - store optimized images and data files
+      - ../public/data:/app/public/data
+      - ../public/products:/app/public/products
+      # Logs directory
+      - ./logs:/app/logs
+    
+    # Networks
+    networks:
+      - shopify-net
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "node", "-e", "console.log('Service running')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# Optional: Web interface for manual sync (uncomment if needed)
+# web-interface:
+#   image: node:18-alpine
+#   container_name: stoffeya-sync-web
+#   restart: unless-stopped
+#   depends_on:
+#     - shopify-sync
+#   ports:
+#     - "3001:3001"
+#   environment:
+#     - NODE_ENV=production
+#   volumes:
+#     - ./web:/app
+#   working_dir: /app
+#   command: ["npm", "start"]
+#   networks:
+#     - shopify-net
+
+networks:
+  shopify-net:
+    driver: bridge
+
+volumes:
+  sync-data:
+    driver: local
+  sync-logs:
+    driver: local 

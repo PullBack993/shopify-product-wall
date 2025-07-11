@@ -19,6 +19,7 @@
         v-for="(image, index) in displayImages"
         :key="`position-${index}`"
         :image="image"
+        :color-scheme="index % 2 === 0 ? 'scheme-6' : 'scheme-3'"
       />
     </div>
   </main>
@@ -55,6 +56,7 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
+  background: transparent; /* Let the app background show through */
   
   // Optimize for portrait TV layout
   .grid-container {

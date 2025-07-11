@@ -1,32 +1,55 @@
 <template>
   <div class="loading-state">
-    <div class="spinner"></div>
-    <p>Loading your fabric collection...</p>
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <h3>Loading Products...</h3>
+      <p>Fetching the latest fabric collection</p>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// No props needed - this is a static loading state
+// No props needed for this component
 </script>
 
 <style lang="scss" scoped>
 .loading-state {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  min-height: 400px;
+  align-items: center;
+  height: 100%;
+  width: 100%;
+  background: var(--bg-light);
+  color: var(--text-primary);
+}
+
+.loading-content {
   text-align: center;
+  padding: 2rem;
+  
+  h3 {
+    margin: 1rem 0 0.5rem 0;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-family: var(--font-family);
+  }
+  
+  p {
+    color: var(--text-secondary);
+    margin: 0;
+    opacity: 0.8;
+    font-family: var(--font-family);
+  }
 }
 
 .spinner {
   width: 50px;
   height: 50px;
-  border: 4px solid rgba(255, 255, 255, 0.3);
-  border-top: 4px solid white;
+  border: 4px solid var(--secondary-color);
+  border-top: 4px solid var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin-bottom: 20px;
+  margin: 0 auto 1rem auto;
 }
 
 @keyframes spin {

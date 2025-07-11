@@ -70,3 +70,12 @@ temp/
 # Environment files
 .env
 sync-script/.env
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+*.log
+
+# Data directories
+data/
+logs/

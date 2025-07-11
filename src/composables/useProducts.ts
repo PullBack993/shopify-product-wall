@@ -18,7 +18,7 @@ export function useProducts() {
 
   // Convert products to grid images format
   const gridImages = computed<GridImage[]>(() => {
-    return products.value.map(product => ({
+    return products.value.map((product) => ({
       id: product.id.toString(),
       url: product.localImageUrl,
       alt: product.imageAlt,
@@ -26,8 +26,9 @@ export function useProducts() {
       qrCodeData: product.productUrl,
       aspectRatio: generateAspectRatio(),
       price: product.price,
-      productType: product.productType
-    }))
+      compareAtPrice: product.compareAtPrice,
+      productType: product.productType,
+    }));
   })
 
   // Generate controlled aspect ratios for better visibility on TV
