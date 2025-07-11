@@ -119,7 +119,7 @@ onUnmounted(() => {
 .brand-display {
   background: rgba(51, 35, 19, 0.3);
   border-top: 1px solid rgba(51, 35, 19, 0.2);
-  padding: 10px 40px;
+  padding: 5px 20px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -132,7 +132,7 @@ onUnmounted(() => {
       align-items: center;
       
       .brand-logo {
-        height: 50px;
+        height: 30px;
       }
       
       .brand-text {
@@ -141,7 +141,7 @@ onUnmounted(() => {
         gap: 10px;
         
         .invitation-text {
-          font-size: 1.1rem;
+          font-size: 0.9rem;
           font-weight: 400;
           color: var(--text-light);
           font-family: var(--font-family);
@@ -150,7 +150,7 @@ onUnmounted(() => {
         }
         
         .website-name {
-          font-size: 2rem;
+          font-size: 1.5rem;
           font-weight: 700;
           text-transform: uppercase;
           font-family: var(--font-family);
