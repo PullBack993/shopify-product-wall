@@ -11,7 +11,7 @@ export function useGridLayout() {
   const columnWidth = computed(() => {
     if (isPortrait.value) {
       // Portrait mode: Use smaller columns to fit more horizontally
-      return 220; // Smaller width for portrait screens
+      return 260; // Smaller width for portrait screens
     } else {
       // Landscape mode: Use wider columns
       return 300; // Standard width for landscape screens
@@ -38,7 +38,7 @@ export function useGridLayout() {
     const availableWidth = window.innerWidth - actualPadding;
 
     // Orientation-specific column limits
-    const minColumns = isPortrait.value ? 2 : 3; // Allow fewer columns in portrait if needed
+    const minColumns = isPortrait.value ? 4 : 3; // Allow fewer columns in portrait if needed
     const maxColumns = isPortrait.value ? 8 : 6; // Allow more columns in portrait mode
 
     // Calculate columns that will fit in available space
