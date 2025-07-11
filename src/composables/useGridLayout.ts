@@ -9,8 +9,8 @@ export function useGridLayout() {
     if (typeof window === 'undefined') return 3
     
     // Extremely conservative calculation to prevent ANY overflow
-    const mainContentPadding = 60 // 30px on each side
-    const extraSafetyBuffer = 80 // Large buffer to ensure zero overflow
+    const mainContentPadding = 10 // 30px on each side
+    const extraSafetyBuffer = 100 // Large buffer to ensure zero overflow
     const availableWidth = window.innerWidth - mainContentPadding - extraSafetyBuffer
     
     const minColumns = 3 // Minimum for portrait TV
