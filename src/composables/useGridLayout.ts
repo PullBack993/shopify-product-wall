@@ -1,7 +1,7 @@
 import { ref, computed } from 'vue'
 
 export function useGridLayout() {
-  const columnWidth = ref(450) // Optimized for no overflow
+  const columnWidth = ref(300) // Optimized for no overflow
   const gap = ref(8) // Minimal gap for maximum space usage
 
   // Calculate number of columns based on screen width for portrait TV
@@ -9,12 +9,12 @@ export function useGridLayout() {
     if (typeof window === 'undefined') return 3
     
     // Extremely conservative calculation to prevent ANY overflow
-    const mainContentPadding = 10 // 30px on each side
-    const extraSafetyBuffer = 0 // Large buffer to ensure zero overflow
+    const mainContentPadding = 60 // 30px on each side
+    const extraSafetyBuffer = 80 // Large buffer to ensure zero overflow
     const availableWidth = window.innerWidth - mainContentPadding - extraSafetyBuffer
     
     const minColumns = 3 // Minimum for portrait TV
-    const maxColumns = 10 // Further reduced maximum
+    const maxColumns = 8 // Further reduced maximum
     
     // Calculate based on available width and column size
     const totalColumnWidth = columnWidth.value + gap.value
@@ -36,46 +36,37 @@ export function useGridLayout() {
 
   // Calculate how many products to display on screen (subset for rotation)
   const calculateMaxDisplayImages = (totalAvailable: number) => {
-    if (typeof window === "undefined") return 40;
-
+    if (typeof window === 'undefined') return 40
+    
     // Calculate screen-based capacity for TV display
-    const headerHeight = 0; // No header currently
-    const footerHeight = 0; // AppFooter height
-    const mainPadding = 0; // ProductGrid padding
-    const bufferHeight = 0; // Safety buffer
-    const availableHeight =
-      window.innerHeight -
-      headerHeight -
-      footerHeight -
-      mainPadding -
-      bufferHeight;
-
-    const columns = numColumns.value;
-    const avgImageHeight = columnWidth.value * 0.9; // Estimate based on avg aspect ratio
-    const imageWithMargin = avgImageHeight + 8; // Margin between images
-    const imagesPerColumn = Math.floor(availableHeight / imageWithMargin);
-    const screenCapacity = imagesPerColumn * columns;
-
+    const headerHeight = 0 // No header currently
+    const footerHeight = 0 // AppFooter height
+    const mainPadding = 0 // ProductGrid padding
+    const bufferHeight = 0 // Safety buffer
+    const availableHeight = window.innerHeight - headerHeight - footerHeight - mainPadding - bufferHeight
+    
+    const columns = numColumns.value
+    const avgImageHeight = columnWidth.value * 0.9 // Estimate based on avg aspect ratio
+    const imageWithMargin = avgImageHeight + 8 // Margin between images
+    const imagesPerColumn = Math.floor(availableHeight / imageWithMargin)
+    const screenCapacity = imagesPerColumn * columns
+    
     // Use 70% of screen capacity for comfortable viewing
-    const displayCount = Math.floor(screenCapacity * 0.7);
-
+    const displayCount = Math.floor(screenCapacity * 0.7)
+    
     // Set reasonable bounds for TV display
-    const minDisplay = 5; // Minimum for good variety
-    const maxDisplay = 20; // Maximum to leave room for rotation
-
-    const finalCount = Math.max(minDisplay, Math.min(maxDisplay, displayCount));
-
-    console.log(`📺 TV DISPLAY CALCULATION:`);
-    console.log(`   • Screen: ${window.innerWidth}x${window.innerHeight}px`);
-    console.log(`   • Screen capacity: ${screenCapacity} products`);
-    console.log(
-      `   • Display count: ${finalCount} products (${Math.round(
-        (finalCount / totalAvailable) * 100
-      )}%)`
-    );
-    console.log(`   • Rotation queue: ${totalAvailable - finalCount} products`);
-
-    return finalCount;
+    const minDisplay = 5 // Minimum for good variety
+    const maxDisplay = 20 // Maximum to leave room for rotation
+    
+    const finalCount = Math.max(minDisplay, Math.min(maxDisplay, displayCount))
+    
+    console.log(`📺 TV DISPLAY CALCULATION:`)
+    console.log(`   • Screen: ${window.innerWidth}x${window.innerHeight}px`)
+    console.log(`   • Screen capacity: ${screenCapacity} products`)
+    console.log(`   • Display count: ${finalCount} products (${Math.round(finalCount/totalAvailable*100)}%)`)
+    console.log(`   • Rotation queue: ${totalAvailable - finalCount} products`)
+    
+    return finalCount
   }
 
   // Handle window resize
