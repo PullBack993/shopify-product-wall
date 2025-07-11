@@ -88,7 +88,7 @@ export function useGridLayout() {
 
     // Get the actual aspect ratios that will be used
     const portraitRatios = [0.8, 0.9, 1.0, 1.1, 1.2];
-    const landscapeRatios = [0.8, 0.9, 1.0, 1.1, 1.2];
+    const landscapeRatios = [0.8, 0.9, 1.0, 1.1];
 
     // const portraitRatios = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
     // const landscapeRatios = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1];
