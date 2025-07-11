@@ -73,53 +73,111 @@ export function useGridLayout() {
     return finalColumns;
   });
 
-  // Calculate how many products to display on screen (use full vertical space)
+  // Calculate how many products to display on screen (precise calculation to fill all space)
   const calculateMaxDisplayImages = (totalAvailable: number) => {
     if (typeof window === "undefined") return 40;
 
     // Calculate screen-based capacity for TV display
     const headerHeight = 0; // No header currently
-    const brandDisplayHeight = 0; // Brand display footer height (padding + logo + text)
+    const brandDisplayHeight = 80; // Brand display footer height (50px logo + 20px padding + 10px buffer)
     const gridPadding = 10; // 5px top + 5px bottom from ProductGrid
     const availableHeight =
       window.innerHeight - headerHeight - brandDisplayHeight - gridPadding;
 
     const columns = numColumns.value;
 
-    // Orientation-aware image height calculation
-    const aspectRatioMultiplier = isPortrait.value ? 1.1 : 1.0; // Slightly taller in portrait
-    const avgImageHeight = columnWidth.value * aspectRatioMultiplier;
-    const imageWithGap = avgImageHeight + gap.value;
-    const imagesPerColumn = Math.floor(availableHeight / imageWithGap);
-    const screenCapacity = imagesPerColumn * columns;
+    // Get the actual aspect ratios that will be used
+    const portraitRatios = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
+    const landscapeRatios = [0.95, 1.0, 1.05, 1.1, 1.15, 1.2];
+    const aspectRatios = isPortrait.value ? portraitRatios : landscapeRatios;
 
-    // Use 100% of screen capacity for maximum space utilization
-    const displayCount = Math.floor(screenCapacity * 1.0);
+    // Use minimum aspect ratio for maximum height utilization (more conservative height estimation)
+    const minAspectRatio = Math.min(...aspectRatios);
+    const maxItemHeight = columnWidth.value * minAspectRatio; // Use minimum ratio for maximum height
 
-    // Orientation-specific bounds
-    const minDisplay = 5; // Minimum for good variety
+    // Calculate precise item heights (matching GridItem styling)
+    const itemMargin = 4; // margin-bottom from GridItem CSS
+    const totalItemHeight = maxItemHeight + itemMargin;
+
+    // Calculate how many items fit per column (base calculation)
+    const baseItemsPerColumn = Math.floor(availableHeight / totalItemHeight);
+
+    // Calculate base screen capacity
+    const baseScreenCapacity = baseItemsPerColumn * columns;
+
+    // Calculate remaining space after base items
+    const usedHeight = baseItemsPerColumn * totalItemHeight;
+    const remainingHeight = availableHeight - usedHeight;
+
+    // AGGRESSIVE BUFFER STRATEGY - Fill ALL remaining space
+    let totalBufferItems = 0;
+
+    // Strategy 1: Add full rows if possible
+    const fullRowsToAdd = Math.floor(remainingHeight / totalItemHeight);
+    if (fullRowsToAdd > 0) {
+      totalBufferItems += fullRowsToAdd * columns;
+    }
+
+    // Strategy 2: Add individual items for remaining space
+    const remainingAfterFullRows =
+      remainingHeight - fullRowsToAdd * totalItemHeight;
+    if (remainingAfterFullRows > maxItemHeight * 0.2) {
+      // If we can fit at least 20% of an item height, add more items
+      const additionalItems =
+        Math.floor(remainingAfterFullRows / (maxItemHeight * 0.3)) * columns;
+      totalBufferItems += additionalItems;
+    }
+
+    // Strategy 3: Add extra items for small remaining spaces
+    if (remainingAfterFullRows > 20) {
+      // If more than 20px remaining
+      totalBufferItems += Math.floor(columns * 0.5); // Add half a row
+    }
+
+    const screenCapacity = baseScreenCapacity + totalBufferItems;
+
+    // Use full screen capacity + aggressive buffer for maximum space utilization
+    const displayCount = screenCapacity;
+
+    // More generous bounds to allow filling all space
+    const minDisplay = 10; // Minimum for good variety
     const maxDisplay = isPortrait.value
-      ? Math.min(totalAvailable, 40) // Portrait: up to 40 items
-      : Math.min(totalAvailable, 60); // Landscape: up to 60 items
+      ? Math.min(totalAvailable, 80) // Portrait: increased to 80 items
+      : Math.min(totalAvailable, 120); // Landscape: increased to 120 items
 
     const finalCount = Math.max(minDisplay, Math.min(maxDisplay, displayCount));
 
+    // Calculate actual space utilization
+    const actualSpaceUsed = finalCount * totalItemHeight;
+    const spaceUtilization = Math.round(
+      (actualSpaceUsed / availableHeight) * 100
+    );
+
     console.log(
-      `📺 TV DISPLAY CALCULATION (${
+      `📺 AGGRESSIVE SPACE FILLING (${
         isPortrait.value ? "PORTRAIT" : "LANDSCAPE"
       }):`
     );
     console.log(`   • Screen: ${window.innerWidth}x${window.innerHeight}px`);
     console.log(`   • Available height: ${availableHeight}px`);
-    console.log(`   • Avg image height: ${avgImageHeight}px`);
-    console.log(`   • Images per column: ${imagesPerColumn}`);
-    console.log(`   • Screen capacity: ${screenCapacity} products`);
+    console.log(`   • Min aspect ratio: ${minAspectRatio.toFixed(2)}`);
+    console.log(`   • Max item height: ${maxItemHeight.toFixed(1)}px`);
+    console.log(`   • Item + margin: ${totalItemHeight.toFixed(1)}px`);
+    console.log(`   • Base items per column: ${baseItemsPerColumn}`);
+    console.log(`   • Base capacity: ${baseScreenCapacity} items`);
+    console.log(`   • Remaining height: ${remainingHeight.toFixed(1)}px`);
+    console.log(`   • Full rows to add: ${fullRowsToAdd}`);
+    console.log(`   • Total buffer items: ${totalBufferItems}`);
+    console.log(`   • Total screen capacity: ${screenCapacity} items`);
+    console.log(`   • Final display count: ${finalCount} items`);
+    console.log(`   • Actual space used: ${actualSpaceUsed.toFixed(1)}px`);
+    console.log(`   • Space utilization: ${spaceUtilization}%`);
     console.log(
-      `   • Display count: ${finalCount} products (${Math.round(
-        (finalCount / totalAvailable) * 100
-      )}%)`
+      `   • Remaining gap: ${Math.max(
+        0,
+        availableHeight - actualSpaceUsed
+      ).toFixed(1)}px`
     );
-    console.log(`   • Rotation queue: ${totalAvailable - finalCount} products`);
 
     return finalCount;
   };

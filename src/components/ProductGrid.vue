@@ -62,19 +62,40 @@ defineEmits<{
   .grid-container {
     width: 100%;
     max-width: none;
+    flex: 1; /* Take all available space */
     height: 100%;
-    column-fill: auto; /* Better top-to-bottom filling */
+    min-height: 100%; /* Ensure minimum height */
+    column-fill: auto; /* Fill columns top to bottom first */
     overflow: hidden; /* Prevent grid overflow */
     padding: 0;
     margin: 0;
     
-    // Ensure items stack properly in columns
+    // Ensure maximum space utilization
+    display: block;
+    box-sizing: border-box;
+    
+    // Force items to fill available space efficiently
     & > * {
       break-inside: avoid;
       display: inline-block;
       width: 100%;
       vertical-align: top;
       box-sizing: border-box;
+      margin-bottom: 4px; /* Match GridItem margin */
+      
+      // Ensure last item in each column can stretch if needed
+      &:last-of-type {
+        margin-bottom: 0;
+      }
+    }
+    
+    // Aggressive space filling - make items slightly taller if needed
+    &::after {
+      content: '';
+      display: block;
+      height: 0;
+      clear: both;
+      visibility: hidden;
     }
   }
 }
