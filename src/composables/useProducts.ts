@@ -40,18 +40,19 @@ export function useProducts() {
   // Generate controlled aspect ratios optimized for screen orientation
   const generateAspectRatio = (): number => {
     if (isPortrait.value) {
-      // Portrait mode: Use more varied aspect ratios for better visual interest
-      // Include some taller images (lower ratios) and some wider images (higher ratios)
-      const portraitRatios = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
+      // Portrait mode: Very tall/long aspect ratios (very small values = very tall images)
+      // Aggressive vertical emphasis to completely fill screen space
+      const portraitRatios = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
       return portraitRatios[Math.floor(Math.random() * portraitRatios.length)];
     } else {
-      // Landscape mode: Use tighter range for consistent appearance
-      const landscapeRatios = [0.95, 1.0, 1.05, 1.1, 1.15, 1.2];
+      // Landscape mode: Very tall aspect ratios (very small values = very tall images)
+      // Aggressive vertical emphasis to completely fill remaining space
+      const landscapeRatios = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1];
       return landscapeRatios[
         Math.floor(Math.random() * landscapeRatios.length)
       ];
     }
-  };
+  }
 
   /**
    * Check if cached data is still valid

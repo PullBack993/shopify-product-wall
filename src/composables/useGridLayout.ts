@@ -87,11 +87,14 @@ export function useGridLayout() {
     const columns = numColumns.value;
 
     // Get the actual aspect ratios that will be used
-    const portraitRatios = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4];
-    const landscapeRatios = [0.95, 1.0, 1.05, 1.1, 1.15, 1.2];
+    const portraitRatios = [0.8, 0.9, 1.0, 1.1, 1.2];
+    const landscapeRatios = [0.8, 0.9, 1.0, 1.1, 1.2];
+
+    // const portraitRatios = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+    // const landscapeRatios = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1];
     const aspectRatios = isPortrait.value ? portraitRatios : landscapeRatios;
 
-    // Use minimum aspect ratio for maximum height utilization (more conservative height estimation)
+    // Use minimum aspect ratio for maximum height utilization (most aggressive height estimation)
     const minAspectRatio = Math.min(...aspectRatios);
     const maxItemHeight = columnWidth.value * minAspectRatio; // Use minimum ratio for maximum height
 

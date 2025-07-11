@@ -480,18 +480,16 @@ onMounted(() => {
 
 .overlay {
   position: absolute;
-  top: 0;
+  bottom: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    to bottom,
-    rgba(0, 0, 0, 0.8) 0%,
-    rgba(0, 0, 0, 0.3) 0%,
-    rgba(0, 0, 0, 0.1) 70%,
-    rgba(0, 0, 0, 0.9) 100%
-  );
+  padding: 8px;
   opacity: 1; /* Always visible for TV display */
+  background-image: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, 
+  rgba(0, 0, 0, 0.6) 40%,
+   rgba(0, 0, 0, 0.3) 60%,
+    rgba(0, 0, 0, 0.2) 80%, 
+    rgba(0, 0, 0, 0) 100%);
   transition: opacity 0.3s ease;
   display: flex;
   flex-direction: row;
