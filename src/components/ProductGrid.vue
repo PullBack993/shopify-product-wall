@@ -49,7 +49,7 @@ defineEmits<{
 <style lang="scss" scoped>
 .main-content {
   flex: 1;
-  padding: 5px 30px; /* Minimal top/bottom padding */
+  padding: 5px 10px; /* Minimal top/bottom padding */
   width: 100%;
   height: 0; /* Allow flexbox to calculate height */
   overflow: hidden; /* Prevent content overflow */
@@ -100,19 +100,5 @@ defineEmits<{
   }
 }
 
-@media (max-width: 1200px) {
-  .main-content {
-    padding: 25px;
-  }
-}
 
-@media (max-width: 768px) {
-  .main-content {
-    padding: 20px;
-  }
-  
-  .grid-container {
-    column-gap: 20px;
-  }
-}
 </style> 
