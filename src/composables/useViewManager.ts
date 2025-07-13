@@ -34,7 +34,7 @@ export const AVAILABLE_VIEWS: ViewConfig[] = [
     description: 'Full-screen product showcase',
     component: 'ProductSlideshow',
     productsPerView: 15,
-    autoSwitchDelay: 3750000 // 37.5 seconds (15 products × 2.5 seconds each)
+    autoSwitchDelay: 37500 // 37.5 seconds (15 products × 2.5 seconds each)
   }
 ]
 
