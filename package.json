@@ -8,7 +8,8 @@
     "build": "vite build",
     "build:check": "vue-tsc && vite build",
     "preview": "vite preview",
-    "sync": "node sync-script/sync-products.js"
+    "sync": "node sync-script/sync-products.js",
+    "deploy": "node scripts/deploy.js --update-version && vite build"
   },
   "dependencies": {
     "vue": "^3.4.0",
