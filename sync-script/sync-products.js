@@ -4,28 +4,23 @@ import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { promises as fs } from 'fs'
 import { createRequire } from 'module'
-import axios from 'axios'
-import sharp from 'sharp'
-import dotenv from 'dotenv'
+import axios from "axios";
+import dotenv from "dotenv";
 
 // Load environment variables
-dotenv.config()
+dotenv.config();
 
 // Get script directory
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Configuration
 const config = {
   shopifyStore: process.env.SHOPIFY_STORE_URL,
   accessToken: process.env.SHOPIFY_ACCESS_TOKEN,
-  productionUrl: process.env.SHOPIFY_PRODUCTION_URL,
+  productionUrl: process.env.SHOPIFY_PRODUCTION_URL || "stoffeya.at",
   outputDir: join(__dirname, "..", "public", "data"),
-  imagesDir: join(__dirname, "..", "public", "products"),
-  maxProducts: 50, // Remove hard limit - fetch ALL products
-  imageSize: 400,
-  imageQuality: 85,
-  concurrency: 3,
+  concurrency: 5, // Increased since we're not processing images
 };
 
 // Validate configuration
@@ -51,7 +46,6 @@ function validateConfig() {
 async function ensureDirectories() {
   try {
     await fs.mkdir(config.outputDir, { recursive: true });
-    await fs.mkdir(config.imagesDir, { recursive: true });
     console.log("📁 Directories created/verified");
   } catch (error) {
     console.error("❌ Error creating directories:", error);
@@ -75,10 +69,10 @@ async function fetchShopifyProducts() {
   let pageCount = 0;
 
   try {
-    while (hasNextPage && allProducts.length < config.maxProducts) {
+    while (hasNextPage) {
       pageCount++;
       const params = {
-        limit: 50,
+        limit: 250, // Maximum allowed per request
       };
 
       if (pageInfo) {
@@ -116,7 +110,7 @@ async function fetchShopifyProducts() {
       console.log(`📊 Total products fetched so far: ${allProducts.length}`);
 
       // Small delay to avoid hitting rate limits
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     console.log(
@@ -133,9 +127,7 @@ async function fetchShopifyProducts() {
   }
 }
 
-// No automatic labeling - just return raw product data
-
-// Transform product data with enhanced information
+// Transform product data - keep ALL fields and use Shopify URLs directly
 function transformProducts(shopifyProducts) {
   console.log("🔄 Transforming product data...");
 
@@ -148,113 +140,73 @@ function transformProducts(shopifyProducts) {
           ? product.variants[0]
           : null;
 
+      // Return ALL product fields from Shopify
       return {
+        // Basic product info
         id: product.id,
         title: product.title,
         handle: product.handle,
+        body_html: product.body_html,
+        vendor: product.vendor,
+        product_type: product.product_type,
+        created_at: product.created_at,
+        updated_at: product.updated_at,
+        published_at: product.published_at,
+        template_suffix: product.template_suffix,
+        status: product.status,
+        published_scope: product.published_scope,
+        tags: product.tags,
+        admin_graphql_api_id: product.admin_graphql_api_id,
+
+        // Variants (ALL variants with ALL fields)
+        variants: product.variants || [],
+
+        // Options
+        options: product.options || [],
+
+        // Images (ALL images with original Shopify URLs)
+        images: product.images || [],
+        image: product.image || null,
+
+        // Computed fields for convenience
         productUrl: `https://${config.productionUrl}/products/${product.handle}`,
         imageUrl: firstImage ? firstImage.src : null,
         imageAlt: firstImage ? firstImage.alt : null,
         price: firstVariant ? firstVariant.price : null,
-        compareAtPrice: firstVariant ? firstVariant.compare_at_price : null, // For sale pricing
-        vendor: product.vendor,
-        productType: product.product_type,
-        tags: product.tags, // Keep tags as raw string for manual processing
-        createdAt: product.created_at,
-        updatedAt: product.updated_at,
-        localImageUrl: null, // Will be set after image optimization
-        allImages: product.images || [], // Include all images
-        description: product.body_html,
-        status: product.status,
-        variants: product.variants || [], // Include all variants
+        compareAtPrice: firstVariant ? firstVariant.compare_at_price : null,
+
+        // Additional metadata
+        totalInventory: product.variants
+          ? product.variants.reduce(
+              (sum, variant) => sum + (variant.inventory_quantity || 0),
+              0
+            )
+          : 0,
+        variantCount: product.variants ? product.variants.length : 0,
+        imageCount: product.images ? product.images.length : 0,
+        hasMultipleVariants: product.variants
+          ? product.variants.length > 1
+          : false,
+        isOnSale: firstVariant
+          ? firstVariant.compare_at_price &&
+            parseFloat(firstVariant.compare_at_price) >
+              parseFloat(firstVariant.price)
+          : false,
+
+        // Keep original Shopify data for reference
+        _shopifyData: product,
       };
     })
     .filter((product) => product.imageUrl); // Only include products with images
 
   console.log(`✅ Transformed ${products.length} products (with images)`);
+  console.log(`📊 Total products from Shopify: ${shopifyProducts.length}`);
+  console.log(`📊 Products with images: ${products.length}`);
+  console.log(
+    `📊 Products without images: ${shopifyProducts.length - products.length}`
+  );
 
   return products;
-}
-
-// Download and optimize image
-async function downloadAndOptimizeImage(product) {
-  if (!product.imageUrl) return product;
-
-  try {
-    const imageFileName = `${product.id}.jpg`;
-    const imagePath = join(config.imagesDir, imageFileName);
-
-    // Check if image already exists and is recent
-    try {
-      const stats = await fs.stat(imagePath);
-      const productUpdated = new Date(product.updatedAt);
-      const imageModified = new Date(stats.mtime);
-
-      if (imageModified > productUpdated) {
-        console.log(`⏭️  Skipping existing image: ${imageFileName}`);
-        product.localImageUrl = `/products/${imageFileName}`;
-        return product;
-      }
-    } catch (error) {
-      // Image doesn't exist, continue with download
-    }
-
-    console.log(`🖼️  Downloading image: ${product.title}`);
-
-    // Download image
-    const response = await axios.get(product.imageUrl, {
-      responseType: "arraybuffer",
-      timeout: 30000,
-    });
-
-    const imageBuffer = Buffer.from(response.data);
-
-    // Optimize and save image
-    await sharp(imageBuffer)
-      .resize(config.imageSize, config.imageSize, {
-        fit: "cover",
-        position: "center",
-      })
-      .jpeg({
-        quality: config.imageQuality,
-        progressive: true,
-      })
-      .toFile(imagePath);
-
-    product.localImageUrl = `/products/${imageFileName}`;
-    console.log(`✅ Optimized image: ${imageFileName}`);
-
-    return product;
-  } catch (error) {
-    console.error(
-      `❌ Error processing image for ${product.title}:`,
-      error.message
-    );
-    return product;
-  }
-}
-
-// Process images with concurrency control
-async function processImages(products) {
-  console.log(`🔄 Processing ${products.length} images...`);
-
-  const chunks = [];
-  for (let i = 0; i < products.length; i += config.concurrency) {
-    chunks.push(products.slice(i, i + config.concurrency));
-  }
-
-  const processedProducts = [];
-
-  for (const chunk of chunks) {
-    const chunkPromises = chunk.map((product) =>
-      downloadAndOptimizeImage(product)
-    );
-    const chunkResults = await Promise.all(chunkPromises);
-    processedProducts.push(...chunkResults);
-  }
-
-  console.log(`✅ Processed ${processedProducts.length} images`);
-  return processedProducts;
 }
 
 // Save products to JSON file
@@ -271,12 +223,17 @@ async function saveProductsData(products) {
         totalCount: products.length,
         lastUpdated: new Date().toISOString(),
         shopifyStore: config.shopifyStore,
-        labelCounts: products.reduce((acc, product) => {
-          const label = product.label || "none";
-          acc[label] = (acc[label] || 0) + 1;
-          return acc;
-        }, {}),
-        syncVersion: "2.0.0",
+        syncVersion: "3.0.0",
+        fetchedAllFields: true,
+        imagesCachedOnFrontend: true,
+        vendors: [...new Set(products.map((p) => p.vendor))],
+        productTypes: [...new Set(products.map((p) => p.product_type))],
+        totalVariants: products.reduce((sum, p) => sum + p.variantCount, 0),
+        totalImages: products.reduce((sum, p) => sum + p.imageCount, 0),
+        productsOnSale: products.filter((p) => p.isOnSale).length,
+        productsWithMultipleVariants: products.filter(
+          (p) => p.hasMultipleVariants
+        ).length,
       },
     };
 
@@ -293,7 +250,7 @@ async function saveProductsData(products) {
   }
 }
 
-// Create fallback data
+// Create fallback data with Shopify URLs
 async function createFallbackData(products) {
   console.log("🔄 Creating fallback data...");
 
@@ -302,8 +259,17 @@ async function createFallbackData(products) {
 
     // Create a subset of products for fallback
     const fallbackProducts = products.slice(0, 12).map((product) => ({
-      ...product,
-      localImageUrl: product.localImageUrl || "/placeholder-image.jpg",
+      id: product.id,
+      title: product.title,
+      handle: product.handle,
+      productUrl: product.productUrl,
+      imageUrl: product.imageUrl,
+      imageAlt: product.imageAlt,
+      price: product.price,
+      compareAtPrice: product.compareAtPrice,
+      vendor: product.vendor,
+      product_type: product.product_type,
+      isOnSale: product.isOnSale,
     }));
 
     await fs.writeFile(fallbackPath, JSON.stringify(fallbackProducts, null, 2));
@@ -317,25 +283,37 @@ async function createFallbackData(products) {
 // Generate sync report
 function generateReport(products) {
   console.log("\n📊 SYNC REPORT");
-  console.log("=".repeat(50));
+  console.log("=".repeat(60));
   console.log(`Total products: ${products.length}`);
   console.log(
-    `Products with images: ${products.filter((p) => p.localImageUrl).length}`
+    `Products with images: ${products.filter((p) => p.imageUrl).length}`
   );
   console.log(
     `Products with prices: ${products.filter((p) => p.price).length}`
   );
+  console.log(`Products on sale: ${products.filter((p) => p.isOnSale).length}`);
   console.log(
-    `Products with compare prices: ${
-      products.filter((p) => p.compareAtPrice).length
+    `Products with multiple variants: ${
+      products.filter((p) => p.hasMultipleVariants).length
     }`
   );
   console.log(`Unique vendors: ${new Set(products.map((p) => p.vendor)).size}`);
   console.log(
-    `Unique product types: ${new Set(products.map((p) => p.productType)).size}`
+    `Unique product types: ${new Set(products.map((p) => p.product_type)).size}`
   );
+  console.log(
+    `Total variants: ${products.reduce((sum, p) => sum + p.variantCount, 0)}`
+  );
+  console.log(
+    `Total images: ${products.reduce((sum, p) => sum + p.imageCount, 0)}`
+  );
+  console.log(
+    `Total inventory: ${products.reduce((sum, p) => sum + p.totalInventory, 0)}`
+  );
+  console.log(`Image processing: Skipped (using Shopify URLs directly)`);
+  console.log(`Image caching: Frontend implementation`);
   console.log(`Last updated: ${new Date().toLocaleString()}`);
-  console.log("=".repeat(50));
+  console.log("=".repeat(60));
 }
 
 // Main sync function
@@ -343,7 +321,13 @@ async function syncProducts() {
   const startTime = Date.now();
 
   console.log("🚀 Starting Shopify product sync...");
-  console.log(`📊 Config: ${config.shopifyStore} (fetching ALL products)`);
+  console.log(
+    `📊 Config: ${config.shopifyStore} (fetching ALL products with ALL fields)`
+  );
+  console.log(
+    `🖼️  Images: Using Shopify URLs directly (no download/compression)`
+  );
+  console.log(`💾 Caching: Frontend implementation for offline access`);
 
   try {
     // Validate configuration
@@ -355,23 +339,21 @@ async function syncProducts() {
     // Fetch ALL products from Shopify
     const shopifyProducts = await fetchShopifyProducts();
 
-    // Transform product data
+    // Transform product data (keep ALL fields)
     const products = transformProducts(shopifyProducts);
 
-    // Process images
-    const processedProducts = await processImages(products);
-
     // Save products data
-    await saveProductsData(processedProducts);
+    await saveProductsData(products);
 
     // Create fallback data
-    await createFallbackData(processedProducts);
+    await createFallbackData(products);
 
     // Generate report
-    generateReport(processedProducts);
+    generateReport(products);
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`\n✅ Sync completed successfully in ${duration}s`);
+    console.log(`🚀 Ready to deploy with ${products.length} products!`);
   } catch (error) {
     console.error("\n❌ Sync failed:", error.message);
     process.exit(1);

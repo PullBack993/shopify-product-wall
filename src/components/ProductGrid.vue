@@ -6,26 +6,60 @@
     <!-- Error State -->
     <ErrorState v-else-if="error" :error="error" @retry="$emit('retry')" />
     
-    <!-- Pinterest Grid -->
+    <!-- Vertical Marquee Grid -->
     <div 
       v-else
-      class="grid-container" 
-      :style="{ 
-        columnCount: numColumns,
-        columnGap: `${gap}px`
-      }"
+      class="marquee-container"
     >
-      <GridItem
-        v-for="(image, index) in displayImages"
-        :key="`position-${index}`"
-        :image="image"
-        :color-scheme="index % 2 === 0 ? 'scheme-6' : 'scheme-3'"
-      />
+      <div 
+        v-for="columnIndex in numColumns"
+        :key="`column-${columnIndex - 1}`"
+        class="marquee-column"
+        :class="{
+          'column-even': (columnIndex - 1) % 2 === 0,
+          'column-odd': (columnIndex - 1) % 2 === 1
+        }"
+        :style="{
+          '--gap': `${gap}px`,
+          '--animation-duration': `${getAnimationDuration(columnIndex - 1)}s`
+        }"
+      >
+        <!-- First set of images -->
+        <div class="marquee-content">
+          <div
+            v-for="(image, imageIndex) in getColumnImages(columnIndex - 1)"
+            :key="`col-${columnIndex - 1}-img-${imageIndex}`"
+            class="marquee-item"
+            :style="{ marginBottom: `${gap}px` }"
+          >
+            <GridItem
+              :image="image"
+              :color-scheme="imageIndex % 2 === 0 ? 'scheme-6' : 'scheme-3'"
+            />
+          </div>
+        </div>
+        
+        <!-- Duplicate set for seamless loop -->
+        <div class="marquee-content" aria-hidden="true">
+          <div
+            v-for="(image, imageIndex) in getColumnImages(columnIndex - 1)"
+            :key="`col-${columnIndex - 1}-img-duplicate-${imageIndex}`"
+            class="marquee-item"
+            :style="{ marginBottom: `${gap}px` }"
+          >
+            <GridItem
+              :image="image"
+              :color-scheme="imageIndex % 2 === 0 ? 'scheme-6' : 'scheme-3'"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   </main>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import GridItem from './GridItem.vue'
 import LoadingState from './LoadingState.vue'
 import ErrorState from './ErrorState.vue'
@@ -39,66 +73,136 @@ interface Props {
   gap: number
 }
 
-defineProps<Props>()
+const props = defineProps<Props>()
 
 defineEmits<{
   retry: []
 }>()
+
+// Group images by column based on columnIndex property
+const getColumnImages = (columnIndex: number) => {
+  return props.displayImages.filter(image => image.columnIndex === columnIndex)
+}
+
+// Get different animation durations for each column to create variation
+const getAnimationDuration = (columnIndex: number) => {
+  const baseDuration = 60 // Base duration in seconds
+  const variation = (columnIndex % 3) * 5 // Add 0, 5, or 10 seconds variation
+  return baseDuration + variation
+}
+
+// Calculate total columns with images
+const getActiveColumns = computed(() => {
+  if (props.displayImages.length === 0) return 0
+  const maxColumnIndex = Math.max(...props.displayImages.map(img => img.columnIndex || 0))
+  return maxColumnIndex + 1
+})
+
+// Debug logging
+const logColumnDistribution = () => {
+  console.log('📊 Marquee Column distribution:')
+  const activeColumns = getActiveColumns.value
+  for (let i = 0; i < activeColumns; i++) {
+    const columnImages = getColumnImages(i)
+    const direction = i % 2 === 0 ? 'up' : 'down'
+    const duration = getAnimationDuration(i)
+    console.log(`  Column ${i}: ${columnImages.length} images (${direction}, ${duration}s)`)
+  }
+}
+
+// Log when images change
+const totalImages = computed(() => props.displayImages.length)
+let lastImageCount = 0
+
+const checkForImageChanges = () => {
+  if (totalImages.value !== lastImageCount) {
+    lastImageCount = totalImages.value
+    logColumnDistribution()
+  }
+}
+
+// Call check on each render
+checkForImageChanges()
 </script>
 
 <style lang="scss" scoped>
 .main-content {
   flex: 1;
-  padding: 5px 10px; /* Minimal top/bottom padding */
+  padding: 5px 10px;
   width: 100%;
-  height: 0; /* Allow flexbox to calculate height */
-  overflow: hidden; /* Prevent content overflow */
+  height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  background: transparent; /* Let the app background show through */
+  background: transparent;
   
-  // Optimize for portrait TV layout
-  .grid-container {
+  .marquee-container {
     width: 100%;
-    max-width: none;
-    flex: 1; /* Take all available space */
     height: 100%;
-    min-height: 100%; /* Ensure minimum height */
-    column-fill: auto; /* Fill columns top to bottom first */
-    overflow: hidden; /* Prevent grid overflow */
-    padding: 0;
-    margin: 0;
+    display: flex;
+    flex-direction: row;
+    gap: var(--gap, 10px);
+    overflow: hidden;
     
-    // Ensure maximum space utilization
-    display: block;
-    box-sizing: border-box;
-    
-    // Force items to fill available space efficiently
-    & > * {
-      break-inside: avoid;
-      display: inline-block;
-      width: 100%;
-      vertical-align: top;
-      box-sizing: border-box;
-      margin-bottom: 4px; /* Match GridItem margin */
+    .marquee-column {
+      flex: 1;
+      height: 100%;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      flex-direction: column;
       
-      // Ensure last item in each column can stretch if needed
-      &:last-of-type {
-        margin-bottom: 0;
+      .marquee-content {
+        display: flex;
+        flex-direction: column;
+        
+        .marquee-item {
+          flex-shrink: 0;
+          width: 100%;
+        }
       }
-    }
-    
-    // Aggressive space filling - make items slightly taller if needed
-    &::after {
-      content: '';
-      display: block;
-      height: 0;
-      clear: both;
-      visibility: hidden;
+      
+      // Even columns: scroll up
+      &.column-even {
+        .marquee-content {
+          animation: scrollUp var(--animation-duration, 20s) linear infinite;
+        }
+      }
+      
+      // Odd columns: scroll down
+      &.column-odd {
+        .marquee-content {
+          animation: scrollDown var(--animation-duration, 25s) linear infinite;
+        }
+      }
     }
   }
 }
 
+// Keyframe animations for vertical scrolling
+@keyframes scrollUp {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-100%);
+  }
+}
 
+@keyframes scrollDown {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .main-content {
+    padding: 3px 8px;
+  }
+}
 </style> 

@@ -38,8 +38,8 @@ export function useGridLayout() {
     const availableWidth = window.innerWidth - actualPadding;
 
     // Orientation-specific column limits
-    const minColumns = isPortrait.value ? 4 : 3; // Allow fewer columns in portrait if needed
-    const maxColumns = isPortrait.value ? 8 : 6; // Allow more columns in portrait mode
+    const minColumns = isPortrait.value ? 4 : 1; // Allow fewer columns in portrait if needed
+    const maxColumns = isPortrait.value ? 8 : 4; // Allow more columns in portrait mode
 
     // Calculate columns that will fit in available space
     const totalColumnWidth = columnWidth.value + gap.value;

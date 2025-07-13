@@ -22,7 +22,22 @@
       </div>
     </div>
 
-    <ProductGrid 
+    <!-- View Indicator (Dev Mode Only) -->
+    <div v-if="isDev" class="view-indicator">
+      <div class="view-info">
+        <span class="view-name">{{ currentView.name }}</span>
+        <span class="view-shortcuts">
+          Press 1-4 to switch views • A to toggle auto-switch • ←→ to navigate
+        </span>
+      </div>
+      <div class="view-timer" v-if="autoSwitchEnabled">
+        Next: {{ Math.ceil((timeUntilNextSwitch || 0) / 1000) }}s
+      </div>
+    </div>
+
+    <!-- Dynamic Component Rendering -->
+    <component 
+      :is="currentComponentName"
       :loading="loading"
       :error="error"
       :display-images="displayImages"
@@ -47,61 +62,112 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import ProductGrid from './components/ProductGrid.vue'
+import VerticalGrid from './components/VerticalGrid.vue'
+import ProductSlideshow from './components/ProductSlideshow.vue'
+import ProductMosaic from './components/ProductMosaic.vue'
 import { useProducts } from './composables/useProducts'
 import { useGridLayout } from './composables/useGridLayout'
 import { useImageRotation } from './composables/useImageRotation'
+import { useViewManager } from './composables/useViewManager'
+import { useProductDistribution } from './composables/useProductDistribution'
 
 const shuffling = ref(false)
+const isDev = import.meta.env.DEV
 
 // Use composables
-const { gridImages, loading, error, refreshProducts } = useProducts()
+const { products, loading, error, refreshProducts } = useProducts()
 const { numColumns, gap, calculateMaxDisplayImages, handleResize } = useGridLayout()
-const imageRotation = useImageRotation(gridImages)
+const productDistribution = useProductDistribution()
+const viewManager = useViewManager()
 
-// Extract reactive values from image rotation
+// Extract reactive values from composables
 const {
-  displayImages,
-  initializeDisplayImages,
-  startAutoRotate,
-  stopAutoRotate,
-  shuffleImages,
-  handleKeyPress
-} = imageRotation
+  setAllProducts,
+  getGridImagesForView,
+  moveToNextViewProducts,
+  getCurrentCycleInfo,
+  resetToBeginning,
+  categoryCounts
+} = productDistribution
 
-// Calculate max display images
-const maxDisplayImages = computed(() => calculateMaxDisplayImages(gridImages.value.length))
+const {
+  currentView,
+  autoSwitchEnabled,
+  getTimeUntilNextSwitch,
+  handleKeyPress: handleViewKeyPress,
+  initialize: initializeViewManager,
+  cleanup: cleanupViewManager,
+  updateProductStats
+} = viewManager
 
-// Initialize display images when gridImages loads
-watch(gridImages, (newImages) => {
-  if (newImages.length > 0) {
-    initializeDisplayImages(maxDisplayImages.value)
-    
-    // Start auto-rotation if not already started
-    setTimeout(() => {
-      if (displayImages.value.length > 0) {
-        startAutoRotate()
-      }
-    }, 1000)
+// Get current view's products
+const displayImages = computed(() => getGridImagesForView(currentView.value.id))
+
+// Get current component name for dynamic rendering
+const currentComponentName = computed(() => {
+  const componentMap: Record<string, any> = {
+    'ProductGrid': ProductGrid,
+    'VerticalGrid': VerticalGrid,
+    'ProductSlideshow': ProductSlideshow,
+    'ProductMosaic': ProductMosaic,
+  }
+  
+  return componentMap[currentView.value.component] || ProductGrid
+})
+
+// Time until next view switch
+const timeUntilNextSwitch = ref<number | null>(null)
+
+// Update timer display
+const updateTimer = () => {
+  timeUntilNextSwitch.value = getTimeUntilNextSwitch()
+}
+
+// Initialize product distribution when products load
+watch(products, (newProducts) => {
+  if (newProducts.length > 0) {
+    setAllProducts(newProducts)
+    // Update product statistics in view manager
+    updateProductStats(newProducts.length, displayImages.value, categoryCounts.value)
   }
 }, { immediate: true })
 
-// Watch for screen size changes and reinitialize
-watch([numColumns, maxDisplayImages], () => {
-  if (gridImages.value.length > 0) {
-    initializeDisplayImages(maxDisplayImages.value)
+// Watch for view changes and update product statistics
+watch(currentView, (newView, oldView) => {
+  if (newView.id !== oldView?.id) {
+    // Update product statistics when view changes
+    updateProductStats(products.value.length, displayImages.value, categoryCounts.value)
   }
 })
 
-// Handle shuffle with loading state
-const handleShuffle = async () => {
-  if (shuffling.value || gridImages.value.length === 0) return
+// Watch for changes in display images to update statistics
+watch(displayImages, (newImages) => {
+  if (products.value.length > 0) {
+    updateProductStats(products.value.length, newImages, categoryCounts.value)
+  }
+})
+
+// Listen for view switch events to handle product distribution
+let viewSwitchListener: ((event: Event) => void) | null = null
+
+onMounted(() => {
+  viewSwitchListener = (event: any) => {
+    // Move to next set of products when view changes
+    moveToNextViewProducts(event.detail.fromView)
+  }
   
-  shuffling.value = true
+  document.addEventListener('viewSwitched', viewSwitchListener)
+})
+
+// Combined keyboard handler
+const handleKeyPress = (event: KeyboardEvent) => {
+  // Handle view switching first
+  handleViewKeyPress(event)
   
-  try {
-    await shuffleImages(maxDisplayImages.value)
-  } finally {
-    shuffling.value = false
+  // Handle product distribution keys
+  if (event.key === 'r' || event.key === 'R') {
+    event.preventDefault()
+    resetToBeginning()
   }
 }
 
@@ -109,21 +175,27 @@ onMounted(() => {
   // Listen for window resize
   window.addEventListener('resize', handleResize)
   
-  // Listen for keyboard events (spacebar for manual rotation in dev)
+  // Listen for keyboard events
   window.addEventListener('keydown', handleKeyPress)
   
-  // Start auto-rotation once display is initialized
-  setTimeout(() => {
-    if (displayImages.value.length > 0) {
-      startAutoRotate()
-    }
-  }, 2000) // Wait 2 seconds for initial load
+  // Initialize view manager
+  initializeViewManager()
+  
+  // Start timer updates for dev mode
+  if (isDev) {
+    setInterval(updateTimer, 1000)
+  }
 })
 
 onUnmounted(() => {
-  stopAutoRotate()
+  cleanupViewManager()
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('keydown', handleKeyPress)
+  
+  // Clean up view switch listener
+  if (viewSwitchListener) {
+    document.removeEventListener('viewSwitched', viewSwitchListener)
+  }
 })
 </script>
 
@@ -135,8 +207,46 @@ onUnmounted(() => {
   color: var(--text-primary);
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Prevent any overflow */
+  overflow: hidden;
   position: relative;
+}
+
+// View indicator for development
+.view-indicator {
+  position: fixed;
+  top: 15px;
+  left: 20px;
+  z-index: 2000;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  
+  .view-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    
+    .view-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    .view-shortcuts {
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.7);
+      font-family: monospace;
+    }
+  }
+  
+  .view-timer {
+    margin-top: 4px;
+    font-size: 0.8rem;
+    color: #4CAF50;
+    font-weight: 500;
+  }
 }
 
 .social-display {
@@ -147,7 +257,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 8px;
   z-index: 1000;
-  
+
   .social-item {
     display: flex;
     align-items: center;
@@ -263,6 +373,22 @@ onUnmounted(() => {
       
       .social-text {
         font-size: 0.8rem;
+      }
+    }
+  }
+  
+  .view-indicator {
+    top: 10px;
+    left: 15px;
+    padding: 6px 12px;
+    
+    .view-info {
+      .view-name {
+        font-size: 0.9rem;
+      }
+      
+      .view-shortcuts {
+        font-size: 0.6rem;
       }
     }
   }

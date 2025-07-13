@@ -6,16 +6,18 @@
       [colorScheme || 'scheme-6']: true
     }"
     :style="{ 
-      aspectRatio: image.aspectRatio,
+      aspectRatio: image.aspectRatio * 1.2,
       animationDelay: `${Math.random() * 0.5}s`
     }"
   >
     <div class="image-container">
       <img
-        :src="image.url"
+        :src="optimizedImageUrl"
         :alt="image.alt"
         class="grid-image"
         loading="lazy"
+        decoding="async"
+        fetchpriority="high"
         @load="onImageLoad"
         @error="onImageError"
       />
@@ -58,9 +60,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import QRCode from 'qrcode'
 import type { GridImage } from '@/types'
+import { getGridImageUrl } from '@/utils/imageUtils'
 
 interface Props {
   image: GridImage
@@ -78,6 +81,11 @@ const qrCanvas = ref<HTMLCanvasElement | null>(null)
 const isLoading = ref(true)
 const hasError = ref(false)
 const isChanging = ref(false)
+
+// Optimize image URL for better performance
+const optimizedImageUrl = computed(() => {
+  return getGridImageUrl(props.image.url, 400) // 400px width for grid items
+})
 
 const onImageLoad = () => {
   isLoading.value = false
@@ -200,17 +208,16 @@ onMounted(() => {
 .grid-item {
   position: relative;
   break-inside: avoid;
-  margin-bottom: 4px; /* Minimal gap for maximum screen usage */
-  border-radius: 14px;
+  margin-bottom: 0; /* No gap for maximum screen usage */
+  border-radius: 8px;
   overflow: hidden;
   background: var(--shopify-bg-scheme-6); /* Using the lighter scheme as default */
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
   animation: fadeInUp 0.6s ease-out both;
-  display: inline-block;
+  display: block;
   width: 100%;
-  vertical-align: top;
-  min-height: 250px; /* Ensure minimum height for visibility */
+  max-height: 500px;
   box-sizing: border-box;
   
   /* Alternative scheme class */
@@ -227,7 +234,7 @@ onMounted(() => {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     
     .grid-image {
-      transform: scale(1.01); /* Subtle scaling */
+      transform: scaleY(1.01); /* Subtle scaling */
     }
   }
   

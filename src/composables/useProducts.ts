@@ -24,17 +24,19 @@ export function useProducts() {
 
   // Convert products to grid images format
   const gridImages = computed<GridImage[]>(() => {
-    return products.value.map((product) => ({
-      id: product.id.toString(),
-      url: product.localImageUrl,
-      alt: product.imageAlt,
-      text: product.title,
-      qrCodeData: product.productUrl,
-      aspectRatio: generateAspectRatio(),
-      price: product.price,
-      compareAtPrice: product.compareAtPrice,
-      productType: product.productType,
-    }));
+    return products.value
+      .filter((product) => product.imageUrl) // Only include products with images
+      .map((product) => ({
+        id: product.id.toString(),
+        url: product.imageUrl,
+        alt: product.imageAlt,
+        text: product.title,
+        qrCodeData: product.productUrl,
+        aspectRatio: generateAspectRatio(),
+        price: product.price,
+        compareAtPrice: product.compareAtPrice,
+        productType: product.product_type || product.productType, // Handle both field names
+      }));
   });
 
   // Generate controlled aspect ratios optimized for screen orientation
@@ -52,7 +54,7 @@ export function useProducts() {
         Math.floor(Math.random() * landscapeRatios.length)
       ];
     }
-  }
+  };
 
   /**
    * Check if cached data is still valid
