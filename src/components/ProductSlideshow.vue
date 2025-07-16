@@ -478,7 +478,7 @@ onUnmounted(() => {
         .product-showcase {
           display: flex;
           align-items: center;
-          gap: 60px;
+        gap: 10px;
           height: 100%;
           
           .product-image-container {
@@ -582,6 +582,7 @@ onUnmounted(() => {
           .product-details {
             flex: 1;
             color: white;
+            margin-right: 1rem;
             
             .product-title {
               font-size: 3rem;

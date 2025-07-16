@@ -23,7 +23,7 @@
     </div>
 
     <!-- View Indicator (Dev Mode Only) -->
-    <div v-if="true" class="view-indicator">
+    <div v-if="isDev" class="view-indicator">
       <div class="view-info">
         <span class="view-name">{{ currentView.name }}</span>
         <span class="view-shortcuts">
@@ -229,15 +229,17 @@ onUnmounted(() => {
     gap: 4px;
     
     .view-name {
-      font-size: 1rem;
+      font-size: 1.2rem;
       font-weight: 600;
       color: #fff;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
     
     .view-shortcuts {
-      font-size: 0.7rem;
-      color: rgba(255, 255, 255, 0.7);
-      font-family: monospace;
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.8);
+      font-family: var(--font-family-mono);
+      line-height: 1.4;
     }
   }
   
@@ -277,11 +279,13 @@ onUnmounted(() => {
     }
     
     .social-text {
-      font-size: 0.9rem;
-      font-weight: 500;
+      font-size: 1.1rem;
+      font-weight: 600;
       color: var(--text-light);
       font-family: var(--font-family);
       white-space: nowrap;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      letter-spacing: 0.02em;
     }
   }
 }
@@ -310,23 +314,27 @@ onUnmounted(() => {
       align-items: center;
       gap: 10px;
       flex: 1;
-      justify-content: center;
+      margin-left: 6rem;
       
       .invitation-text {
-        font-size: 0.9rem;
-        font-weight: 400;
+        font-size: 1.1rem;
+        font-weight: 500;
         color: var(--text-light);
         font-family: var(--font-family);
-        opacity: 0.9;
+        opacity: 0.95;
         font-style: italic;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        letter-spacing: 0.02em;
       }
       
       .website-name {
-        font-size: 1.5rem;
+        font-size: 1.8rem;
         font-weight: 700;
         text-transform: uppercase;
         font-family: var(--font-family);
-        color: var(--text-light);        
+        color: var(--text-light);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        letter-spacing: 0.05em;
       }
     }
   }
