@@ -78,11 +78,10 @@
                   <canvas 
                     ref="qrCanvas" 
                     class="qr-code"
-                    width="120"
-                    height="120"
+                    width="150"
+                    height="150"
                     :title="`QR Code for ${currentSlide.text}`"
                   ></canvas>
-                  <span class="qr-label">Scan to view online</span>
                 </div>
               </div>
             </div>
@@ -137,7 +136,7 @@ const backgroundImageLoading = ref(true)
 let slideInterval: ReturnType<typeof setInterval> | null = null
 let progressInterval: ReturnType<typeof setInterval> | null = null
 
-const slideDuration = import.meta.env.DEV ? 5000000 : 8000 // 5s in dev, 8s in production
+const slideDuration = import.meta.env.DEV ? 5000 : 8000 // 5s in dev, 8s in production
 
 // Current slide computed property
 const currentSlide = computed(() => {
@@ -190,7 +189,7 @@ const generateQRCode = async () => {
     canvas.height = 120
     
     await QRCode.toCanvas(canvas, qrData, {
-      width: 120,
+      width: 150,
       margin: 1,
       color: {
         dark: '#000000',

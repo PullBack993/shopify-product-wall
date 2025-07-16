@@ -20,6 +20,7 @@
         :key="image.id"
         :image="image"
         :color-scheme="index % 2 === 0 ? 'scheme-6' : 'scheme-3'"
+        :data-position="index"
       />
     </div>
   </main>
@@ -31,6 +32,7 @@ import GridItem from './GridItem.vue'
 import LoadingState from './LoadingState.vue'
 import ErrorState from './ErrorState.vue'
 import type { GridImage } from '../types'
+import { useGridLayout } from '../composables/useGridLayout'
 
 interface Props {
   loading: boolean
@@ -46,12 +48,18 @@ defineEmits<{
   retry: []
 }>()
 
+// Use grid layout composable for capacity calculation
+const { calculateMaxDisplayImages } = useGridLayout()
+
 // State for image rotation within this view
 const currentDisplayImages = ref<GridImage[]>([])
-const rotationIndex = ref(0)
 const usedProductIds = ref<Set<string>>(new Set()) // Track used product IDs to prevent duplicates
+const lastRotationTime = ref(0) // Track when last rotation occurred
+const recentlyRotatedIds = ref<Map<string, number>>(new Map()) // Track recently rotated products with timestamps
 
 let rotationInterval: ReturnType<typeof setInterval> | null = null
+
+const COOLDOWN_PERIOD = 30000 // 30 seconds cooldown before a product can be rotated back in
 
 // Get the base product ID (remove rotation suffixes)
 const getBaseProductId = (id: string): string => {
@@ -76,71 +84,142 @@ const markProductAsUnused = (productId: string): void => {
   usedProductIds.value.delete(baseId)
 }
 
+// Add a product to the cooldown list
+const addToCooldown = (productId: string): void => {
+  const baseId = getBaseProductId(productId)
+  recentlyRotatedIds.value.set(baseId, Date.now())
+}
+
+// Check if a product is in cooldown period
+const isInCooldown = (productId: string): boolean => {
+  const baseId = getBaseProductId(productId)
+  const rotatedTime = recentlyRotatedIds.value.get(baseId)
+  
+  if (!rotatedTime) return false
+  
+  const timeSinceRotation = Date.now() - rotatedTime
+  return timeSinceRotation < COOLDOWN_PERIOD
+}
+
+// Clean up expired cooldowns
+const cleanupExpiredCooldowns = (): void => {
+  const now = Date.now()
+  for (const [productId, timestamp] of recentlyRotatedIds.value.entries()) {
+    if (now - timestamp >= COOLDOWN_PERIOD) {
+      recentlyRotatedIds.value.delete(productId)
+    }
+  }
+}
+
+// Get available products for rotation (not displayed and not in cooldown)
+const getAvailableProductsForRotation = (): any[] => {
+  return props.displayImages.filter(product => {
+    const baseId = getBaseProductId(product.id)
+    return !usedProductIds.value.has(baseId) && !isInCooldown(product.id)
+  })
+}
+
 // Rotate one image every few seconds within the current view's product set
 const rotateImage = () => {
-  if (props.displayImages.length === 0) return
-  
-  const currentImages = [...currentDisplayImages.value]
-  const totalProducts = props.displayImages.length
-  
-  if (totalProducts === 0) return
-  
-  // Pick a random position to change
-  const positionToChange = Math.floor(Math.random() * currentImages.length)
-  
-  // Remove the current product from used set
-  const currentProductId = currentImages[positionToChange]?.id
-  if (currentProductId) {
-    markProductAsUnused(currentProductId)
+  if (props.displayImages.length === 0 || currentDisplayImages.value.length === 0) {
+    return
   }
   
-  // Find a new product that's not currently displayed
-  const availableProducts = props.displayImages.filter(product => 
-    !isProductAlreadyDisplayed(product.id)
-  )
+  const totalProducts = props.displayImages.length
+  
+  // Clean up expired cooldowns first
+  cleanupExpiredCooldowns()
+  
+  // Pick a random position to change
+  const positionToChange = Math.floor(Math.random() * currentDisplayImages.value.length)
+  const oldImage = currentDisplayImages.value[positionToChange]
+  
+  // Remove the current product from used set and add to cooldown
+  const currentProductId = oldImage?.id
+  if (currentProductId) {
+    markProductAsUnused(currentProductId)
+    addToCooldown(currentProductId)
+  }
+  
+  // Get available products (not displayed and not in cooldown)
+  const availableProducts = getAvailableProductsForRotation()
+  
+  let newImage: any
   
   if (availableProducts.length === 0) {
-    // If no new products available, reset the used set and try again
-    usedProductIds.value.clear()
-    const resetAvailableProducts = props.displayImages.filter(product => 
+    // If no products available, try just excluding displayed ones (ignore cooldown)
+    const availableIgnoringCooldown = props.displayImages.filter(product => 
       !isProductAlreadyDisplayed(product.id)
     )
     
-    if (resetAvailableProducts.length === 0) {
-      return // No products available at all
-    }
-    
-    const newImage = resetAvailableProducts[0]
-    markProductAsUsed(newImage.id)
-    
-    currentImages[positionToChange] = {
-      ...newImage,
-      id: `${newImage.id}-rotation-${Date.now()}`
+    if (availableIgnoringCooldown.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableIgnoringCooldown.length)
+      newImage = availableIgnoringCooldown[randomIndex]
+    } else {
+      // Last resort: reset everything and use first available
+      usedProductIds.value.clear()
+      recentlyRotatedIds.value.clear()
+      
+      if (props.displayImages.length > 0) {
+        newImage = props.displayImages[0]
+      } else {
+        return
+      }
     }
   } else {
     // Pick a random available product
     const randomIndex = Math.floor(Math.random() * availableProducts.length)
-    const newImage = availableProducts[randomIndex]
-    markProductAsUsed(newImage.id)
-    
-    currentImages[positionToChange] = {
-      ...newImage,
-      id: `${newImage.id}-rotation-${Date.now()}`
-    }
+    newImage = availableProducts[randomIndex]
   }
   
-  currentDisplayImages.value = currentImages
+  // Mark new product as used
+  markProductAsUsed(newImage.id)
+  
+  // Simple single-item update - just replace the item directly
+  currentDisplayImages.value[positionToChange] = {
+    ...newImage,
+    id: `${newImage.id}-rotation-${Date.now()}`
+  }
+  
+  // Track rotation timing
+  lastRotationTime.value = Date.now()
+  
+  // Schedule next rotation with a new random delay
+  scheduleNextRotation()
+}
+
+// Schedule the next rotation with a new random delay
+const scheduleNextRotation = () => {
+  // Clear any existing timer
+  if (rotationInterval) {
+    clearInterval(rotationInterval)
+    rotationInterval = null
+  }
+  
+  // Get a new random delay for the next rotation (8-12 seconds)
+  const rotationDelay = 8000 + Math.random() * 4000
+  
+  rotationInterval = setInterval(() => {
+    rotateImage()
+  }, rotationDelay)
 }
 
 // Start rotation when images are available
 const startRotation = () => {
   if (rotationInterval) {
     clearInterval(rotationInterval)
+    rotationInterval = null
   }
   
-  // Rotate every 8-12 seconds
-  const rotationDelay = 8000 + Math.random() * 4000
-  rotationInterval = setInterval(rotateImage, rotationDelay)
+  if (props.displayImages.length === 0) {
+    return
+  }
+  
+  // Initialize rotation timing
+  lastRotationTime.value = Date.now()
+  
+  // Schedule the first rotation
+  scheduleNextRotation()
 }
 
 // Stop rotation
@@ -152,36 +231,76 @@ const stopRotation = () => {
 }
 
 // Initialize display images when props change
-watch(() => props.displayImages, (newImages) => {
+watch(() => props.displayImages, (newImages, oldImages) => {
+  // Stop any existing rotation
+  stopRotation()
+  
   if (newImages.length > 0) {
-    // Clear the used products set
-    usedProductIds.value.clear()
+    // Calculate actual screen capacity based on layout
+    const screenCapacity = calculateMaxDisplayImages(newImages.length)
+    const maxDisplayCount = Math.min(screenCapacity, newImages.length)
     
-    // Show the first N images (based on screen capacity)
-    const maxDisplayCount = Math.min(20, newImages.length) // Show up to 20 images
+    // Clear all tracking (used products and cooldowns)
+    usedProductIds.value.clear()
+    recentlyRotatedIds.value.clear()
+    
     const initialImages = newImages.slice(0, maxDisplayCount)
     
     // Mark initial products as used
     initialImages.forEach(img => markProductAsUsed(img.id))
     
-    currentDisplayImages.value = initialImages.map(img => ({
+    currentDisplayImages.value = initialImages.map((img, index) => ({
       ...img,
-      id: `${img.id}-initial-${Date.now()}`
+      id: `${img.id}-initial-${Date.now()}`,
     }))
     
-    // Start rotation after a delay
+    // Start rotation after a delay to let images settle
     setTimeout(() => {
-      startRotation()
+      if (props.displayImages.length > maxDisplayCount) { // Only rotate if we have extra products
+        startRotation()
+      }
     }, 3000)
+  } else {
+    currentDisplayImages.value = []
+    usedProductIds.value.clear()
+    recentlyRotatedIds.value.clear()
   }
 }, { immediate: true })
 
 onMounted(() => {
-  // Component mounted logic
+  // Development helper: Add global function to check rotation status
+  if (import.meta.env.DEV) {
+    ;(window as any).checkVerticalGridRotation = () => {
+      const timeSinceLastRotation = Date.now() - lastRotationTime.value
+      const cooldownList = Array.from(recentlyRotatedIds.value.entries()).map(([id, timestamp]) => ({
+        productId: id,
+        timeRemaining: Math.max(0, COOLDOWN_PERIOD - (Date.now() - timestamp))
+      }))
+      
+      // Test available products for rotation
+      const availableForRotation = getAvailableProductsForRotation()
+      
+      return {
+        displayImages: currentDisplayImages.value.length,
+        availableProducts: props.displayImages.length,
+        usedProducts: usedProductIds.value.size,
+        productsInCooldown: recentlyRotatedIds.value.size,
+        rotationActive: rotationInterval !== null,
+        timeSinceLastRotation: timeSinceLastRotation,
+        cooldownPeriod: COOLDOWN_PERIOD,
+        availableForRotation: availableForRotation.length,
+        cooldownList: cooldownList
+      }
+    }
+  }
 })
 
 onUnmounted(() => {
   stopRotation()
+  
+  // Clean up tracking
+  usedProductIds.value.clear()
+  recentlyRotatedIds.value.clear()
 })
 </script>
 
@@ -249,7 +368,6 @@ onUnmounted(() => {
     }
   }
 }
-
 
 .grid-container > * {
   height: auto;

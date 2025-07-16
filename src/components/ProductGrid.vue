@@ -34,7 +34,6 @@
           >
             <GridItem
               :image="image"
-              :color-scheme="imageIndex % 2 === 0 ? 'scheme-6' : 'scheme-3'"
             />
           </div>
         </div>
@@ -49,7 +48,6 @@
           >
             <GridItem
               :image="image"
-              :color-scheme="imageIndex % 2 === 0 ? 'scheme-6' : 'scheme-3'"
             />
           </div>
         </div>

@@ -13,30 +13,30 @@ export interface ViewConfig {
 
 export const AVAILABLE_VIEWS: ViewConfig[] = [
   {
-    id: 'marquee',
-    name: 'Vertical Marquee',
-    description: 'Scrolling columns with alternating directions',
-    component: 'ProductGrid',
+    id: "marquee",
+    name: "Vertical Marquee",
+    description: "Scrolling columns with alternating directions",
+    component: "ProductGrid",
     productsPerView: 20,
-    autoSwitchDelay: 20000 // 20 seconds (20 products × 1 second each)
+    autoSwitchDelay: 70000, // 70 seconds (allow one full animation cycle of 60-70s)
   },
   {
-    id: 'grid',
-    name: 'Vertical Grid',
-    description: 'Traditional grid layout with smart rotation',
-    component: 'VerticalGrid',
-    productsPerView: 15,
-    autoSwitchDelay: 22500 // 22.5 seconds (15 products × 1.5 seconds each)
+    id: "grid",
+    name: "Vertical Grid",
+    description: "Traditional grid layout with smart rotation",
+    component: "VerticalGrid",
+    productsPerView: 25,
+    autoSwitchDelay: 60000, // 60 seconds (dynamic screen capacity + rotation pool, rotations every 8-12s)
   },
   {
-    id: 'slideshow',
-    name: 'Product Slideshow',
-    description: 'Full-screen product showcase',
-    component: 'ProductSlideshow',
+    id: "slideshow",
+    name: "Product Slideshow",
+    description: "Full-screen product showcase",
+    component: "ProductSlideshow",
     productsPerView: 15,
-    autoSwitchDelay: 37500 // 37.5 seconds (15 products × 2.5 seconds each)
-  }
-]
+    autoSwitchDelay: 120000, // 120 seconds (15 slides × 8 seconds each for full cycle)
+  },
+];
 
 export function useViewManager() {
   const currentViewIndex = ref(0)

@@ -28,10 +28,10 @@ export function useProductDistribution() {
   
   // Configuration for how many products each view should show
   const viewConfigs = ref<Record<ViewType, number>>({
-    'marquee': 20,    // Show 20 products in marquee view
-    'grid': 15,       // Show 15 products in grid view  
-    'slideshow': 15,  // Show 15 products in slideshow view
-  })
+    marquee: 20, // Show 20 products in marquee view
+    grid: 25, // Show 25 products in grid view (actual screen capacity + rotation pool)
+    slideshow: 15, // Show 15 products in slideshow view
+  });
 
   // Calculate total products needed per cycle
   const productsPerCycle = computed(() => {

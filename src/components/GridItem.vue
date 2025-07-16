@@ -6,7 +6,7 @@
       [colorScheme || 'scheme-6']: true
     }"
     :style="{ 
-      aspectRatio: image.aspectRatio * 1.2,
+      aspectRatio: image.aspectRatio,
       animationDelay: `${Math.random() * 0.5}s`
     }"
   >

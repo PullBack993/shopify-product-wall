@@ -109,7 +109,6 @@ const currentComponentName = computed(() => {
     'ProductGrid': ProductGrid,
     'VerticalGrid': VerticalGrid,
     'ProductSlideshow': ProductSlideshow,
-    'ProductMosaic': ProductMosaic,
   }
   
   return componentMap[currentView.value.component] || ProductGrid
