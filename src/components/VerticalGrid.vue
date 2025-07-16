@@ -250,22 +250,6 @@ onUnmounted(() => {
   }
 }
 
-// Responsive adjustments for better space filling
-@media (min-height: 800px) {
-  .main-content .grid-container {
-    column-fill: auto; /* On taller screens, allow natural filling */
-  }
-}
-
-@media (max-height: 600px) {
-  .main-content {
-    padding: 2px 8px; /* Reduce padding on shorter screens */
-    
-    .grid-container > * {
-      margin-bottom: 1px; /* Even tighter spacing */
-    }
-  }
-}
 
 .grid-container > * {
   height: auto;

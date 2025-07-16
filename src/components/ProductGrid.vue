@@ -199,10 +199,5 @@ checkForImageChanges()
   }
 }
 
-// Responsive adjustments
-@media (max-width: 768px) {
-  .main-content {
-    padding: 3px 8px;
-  }
-}
+
 </style> 
