@@ -137,7 +137,7 @@ const backgroundImageLoading = ref(true)
 let slideInterval: ReturnType<typeof setInterval> | null = null
 let progressInterval: ReturnType<typeof setInterval> | null = null
 
-const slideDuration = import.meta.env.DEV ? 5000 : 8000 // 5s in dev, 8s in production
+const slideDuration = import.meta.env.DEV ? 5000000 : 8000 // 5s in dev, 8s in production
 
 // Current slide computed property
 const currentSlide = computed(() => {
@@ -486,7 +486,7 @@ onUnmounted(() => {
             flex-shrink: 0;
             height: 85%;
             margin-left: 1rem;
-            width: 60%;
+            width: 60vw;
             
             .image-skeleton {
               position: absolute;
@@ -691,34 +691,6 @@ onUnmounted(() => {
   }
 }
 
-// Responsive adjustments
-@media (max-width: 1200px) {
-  .main-content {
-    .slideshow-container {
-      .slide {
-        .slide-content {
-          .product-showcase {
-            gap: 40px;
-            
-            .product-image-container {
-              width: 500px;
-            }
-            
-            .product-details {
-              .product-title {
-                font-size: 2.5rem;
-              }
-              
-              .product-price {
-                font-size: 2rem;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
 
 
 </style> 

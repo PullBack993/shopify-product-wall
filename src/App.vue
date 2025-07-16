@@ -23,7 +23,7 @@
     </div>
 
     <!-- View Indicator (Dev Mode Only) -->
-    <div v-if="isDev" class="view-indicator">
+    <div v-if="true" class="view-indicator">
       <div class="view-info">
         <span class="view-name">{{ currentView.name }}</span>
         <span class="view-shortcuts">
